@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.codekoll</groupId>
+    <artifactId>codekoll-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>codekoll-examples</artifactId>
+  <name>codekoll-examples</name>
+  <description>Intentionally buggy demo project: one documented example per rule + E2E verification.</description>
+
+  <properties>
+    <!-- This module IS the analysis subject: its main sources are intentional runtime bugs
+         demonstrating each rule. External analyzers correctly object to them, which is the
+         point — they are excluded here (and only here) so the intentional bugs survive.
+         Production modules must never set these. -->
+    <checkstyle.skip>true</checkstyle.skip>
+    <pmd.skip>true</pmd.skip>
+    <spotbugs.skip>true</spotbugs.skip>
+    <jacoco.skip>true</jacoco.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.codekoll</groupId>
+      <artifactId>codekoll-engine</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.codekoll</groupId>
+      <artifactId>codekoll-rules</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

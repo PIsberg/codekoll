@@ -1,0 +1,3 @@
+io.codekoll.rules.resources.EmptyCatchRule
+io.codekoll.rules.concurrency.ThreadRunRule
+io.codekoll.rules.security.WeakCryptoRule

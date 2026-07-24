@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="codekoll"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+  <description>Codekoll PMD gate: best-practices + error-prone categories, minus rules that
+    fight the codebase's intentional style (see per-exclusion comments).</description>
+
+  <rule ref="category/java/bestpractices.xml">
+    <!-- Fixture/test-heavy codebase; JUnit rules handled by the test framework itself. -->
+    <exclude name="JUnitTestsShouldIncludeAssert"/>
+    <exclude name="GuardLogStatement"/>
+  </rule>
+  <rule ref="category/java/errorprone.xml">
+    <!-- We ship data tables as static collections initialised in static blocks. -->
+    <exclude name="AvoidDuplicateLiterals"/>
+    <exclude name="NullAssignment"/>
+    <!-- Character-level parsing code legitimately compares against char literals. -->
+    <exclude name="AvoidLiteralsInIfCondition"/>
+    <!-- The codebase uses record-style accessors (field `unit`, accessor `unit()`) —
+         idiomatic modern Java that this rule flags wholesale. -->
+    <exclude name="AvoidFieldNameMatchingMethodName"/>
+  </rule>
+</ruleset>

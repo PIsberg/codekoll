@@ -1,0 +1,10 @@
+target/
+*.class
+*.jar
+!.mvn/wrapper/*.jar
+.idea/
+*.iml
+.vscode/
+.DS_Store
+dependency-reduced-pom.xml
+codekoll-load-test/corpus-large/

@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build, test, quality gates
+        run: mvn -B verify
+      - name: Smoke-test the fat jar
+        run: java -jar codekoll-cli/target/codekoll.jar --help
+      - name: Demo run on examples (all rules fire)
+        run: java -jar codekoll-cli/target/codekoll.jar --fail-on never codekoll-examples/src/main/java
