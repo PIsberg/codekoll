@@ -9,5 +9,8 @@ module io.codekoll.rules {
   provides io.codekoll.api.Rule with
       io.codekoll.rules.resources.EmptyCatchRule,
       io.codekoll.rules.concurrency.ThreadRunRule,
-      io.codekoll.rules.security.WeakCryptoRule;
+      io.codekoll.rules.security.WeakCryptoRule,
+      io.codekoll.rules.correctness.IgnoredReturnRule,
+      io.codekoll.rules.correctness.RefEqualityRule,
+      io.codekoll.rules.performance.StrConcatLoopRule;
 }

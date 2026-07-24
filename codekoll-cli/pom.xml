@@ -48,6 +48,36 @@
   <build>
     <plugins>
       <plugin>
+        <!-- Standing dogfooding gate (PLAN): the freshly shaded jar analyzes codekoll's own
+             production sources on every verify, failing the build on any ERROR finding.
+             No - -classpath needed: javac's fallback classpath is the fat jar itself, which
+             bundles jspecify + picocli (see ARCHITECTURE.md). -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>selfcheck</id>
+            <phase>verify</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>-jar</argument>
+                <argument>${project.build.directory}/codekoll.jar</argument>
+                <argument>--fail-on</argument>
+                <argument>error</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-api/src/main/java</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-engine/src/main/java</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-rules/src/main/java</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-report/src/main/java</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-cli/src/main/java</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
