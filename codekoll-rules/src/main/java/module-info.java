@@ -21,6 +21,11 @@ module io.codekoll.rules {
       io.codekoll.rules.correctness.SbCharCtorRule,
       io.codekoll.rules.correctness.NanCompareRule,
       io.codekoll.rules.correctness.ArrayObjectMethodsRule,
+      io.codekoll.rules.numeric.ShiftOobRule,
+      io.codekoll.rules.numeric.DivZeroRule,
+      io.codekoll.rules.numeric.CompareSubtractRule,
+      io.codekoll.rules.numeric.IntDivFloatRule,
+      io.codekoll.rules.numeric.AbsOverflowRule,
       io.codekoll.rules.performance.StrConcatLoopRule,
       io.codekoll.rules.nullness.ImpossibleCondRule,
       io.codekoll.rules.apimisuse.GenericMismatchRule;
