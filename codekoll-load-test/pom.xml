@@ -11,7 +11,7 @@
   <artifactId>codekoll-load-test</artifactId>
   <name>codekoll-load-test</name>
   <description>Perf harness: corpora, CPU/heap measurement, baseline gate, per-version charts.
-    Fleshed out in Milestone 9 (see PLAN.md).</description>
+    Internal only, never shipped.</description>
 
   <properties>
     <!-- Internal harness, never shipped; measured code is the analyzer, not this module. -->
@@ -19,6 +19,9 @@
     <pmd.skip>true</pmd.skip>
     <spotbugs.skip>true</spotbugs.skip>
     <jacoco.skip>true</jacoco.skip>
+    <!-- Regression thresholds vs the committed baseline (PLAN M9). -->
+    <loadtest.cpu.maxRegression>0.15</loadtest.cpu.maxRegression>
+    <loadtest.heap.maxRegression>0.20</loadtest.heap.maxRegression>
   </properties>
 
   <dependencies>
@@ -34,4 +37,67 @@
       <scope>runtime</scope>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <!-- quick: small corpus + one 100 kLOC run; wired to CI on every build. -->
+    <profile>
+      <id>quick</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>loadtest-quick</id>
+                <phase>verify</phase>
+                <goals><goal>java</goal></goals>
+                <configuration>
+                  <mainClass>io.codekoll.loadtest.LoadTestRunner</mainClass>
+                  <arguments>
+                    <argument>quick</argument>
+                    <argument>${loadtest.cpu.maxRegression}</argument>
+                    <argument>${loadtest.heap.maxRegression}</argument>
+                    <argument>${project.basedir}</argument>
+                    <argument>${maven.multiModuleProjectDirectory}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- full: all tiers, more iterations, regenerates docs/perf charts. -->
+    <profile>
+      <id>full</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>loadtest-full</id>
+                <phase>verify</phase>
+                <goals><goal>java</goal></goals>
+                <configuration>
+                  <mainClass>io.codekoll.loadtest.LoadTestRunner</mainClass>
+                  <arguments>
+                    <argument>full</argument>
+                    <argument>${loadtest.cpu.maxRegression}</argument>
+                    <argument>${loadtest.heap.maxRegression}</argument>
+                    <argument>${project.basedir}</argument>
+                    <argument>${maven.multiModuleProjectDirectory}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
