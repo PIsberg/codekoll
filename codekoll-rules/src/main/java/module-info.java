@@ -93,5 +93,8 @@ module io.codekoll.rules {
       io.codekoll.rules.apimisuse.ToArrayCastRule,
       io.codekoll.rules.apimisuse.RegexMetaLiteralRule,
       io.codekoll.rules.apimisuse.RemoveIntAmbiguousRule,
-      io.codekoll.rules.apimisuse.ToMapDuplicatesRule;
+      io.codekoll.rules.apimisuse.ToMapDuplicatesRule,
+      io.codekoll.rules.apimisuse.ImmutableMutateRule,
+      io.codekoll.rules.apimisuse.LocaleCaseRule,
+      io.codekoll.rules.apimisuse.ComputeIfAbsentModRule;
 }
