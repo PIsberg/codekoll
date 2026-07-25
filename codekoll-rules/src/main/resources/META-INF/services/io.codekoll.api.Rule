@@ -36,6 +36,10 @@ io.codekoll.rules.numeric.DivZeroRule
 io.codekoll.rules.numeric.CompareSubtractRule
 io.codekoll.rules.numeric.IntDivFloatRule
 io.codekoll.rules.numeric.AbsOverflowRule
+io.codekoll.rules.numeric.FloatEqualityRule
+io.codekoll.rules.concurrency.CtorThreadStartRule
+io.codekoll.rules.resources.LostCauseRule
+io.codekoll.rules.resources.CatchNpeRule
 io.codekoll.rules.performance.StrConcatLoopRule
 io.codekoll.rules.performance.RegexInLoopRule
 io.codekoll.rules.performance.KeysetGetRule
