@@ -94,6 +94,7 @@
           <version>3.5.3</version>
           <configuration>
             <useModulePath>false</useModulePath>
+            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
           </configuration>
         </plugin>
         <plugin>

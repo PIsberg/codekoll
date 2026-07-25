@@ -36,7 +36,7 @@ jobs:
       - name: Checkstyle
         run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli checkstyle:check
       - name: PMD
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli pmd:check
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli -DskipTests package pmd:check
       - name: SpotBugs + find-sec-bugs
         run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli -DskipTests package spotbugs:check
 
