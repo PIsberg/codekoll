@@ -31,7 +31,6 @@ public class ProxyAnnotationInvisibleExample {
   }
 
   int balance() {
-    buggy();
     return balance;
   }
 }
