@@ -9,6 +9,10 @@ module io.codekoll.rules {
   provides io.codekoll.api.Rule with
       io.codekoll.rules.resources.EmptyCatchRule,
       io.codekoll.rules.resources.ResourceLeakRule,
+      io.codekoll.rules.resources.PrintStackTraceRule,
+      io.codekoll.rules.resources.FinalizeRule,
+      io.codekoll.rules.resources.ThrowInFinallyRule,
+      io.codekoll.rules.resources.CatchBroadRule,
       io.codekoll.rules.concurrency.ThreadRunRule,
       io.codekoll.rules.concurrency.SyncOnValueRule,
       io.codekoll.rules.concurrency.MonitorOnLockRule,
