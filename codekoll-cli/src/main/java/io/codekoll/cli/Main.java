@@ -8,6 +8,7 @@ import io.codekoll.engine.RuleRegistry;
 import io.codekoll.report.ConsoleReporter;
 import io.codekoll.report.JsonReporter;
 import io.codekoll.report.Reporter;
+import io.codekoll.report.SarifReporter;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,7 +39,7 @@ public final class Main implements Callable<Integer> {
   private int release;
 
   @Option(names = "--format", defaultValue = "console",
-      description = "Output format: console, json (default: ${DEFAULT-VALUE}).")
+      description = "Output format: console, json, sarif (default: ${DEFAULT-VALUE}).")
   private String format = "console";
 
   @Option(names = "--fail-on", defaultValue = "error",
@@ -57,10 +58,40 @@ public final class Main implements Callable<Integer> {
       description = "Print a rule's explanation and fix, then exit.")
   private String explain = "";
 
+  @Option(names = "--catalog",
+      description = "Print the full rule catalog as Markdown, then exit.")
+  private boolean catalog;
+
+  @Option(names = "--output", paramLabel = "<file>",
+      description = "Write output to this file instead of stdout.")
+  private Path output;
+
+  // The CLI is the one component allowed to write to stdout/stderr (ArchUnit-enforced);
+  // this startup error precedes the output writer's creation.
   @Override
+  @SuppressWarnings("PMD.SystemPrintln")
   public Integer call() {
-    PrintWriter out = new PrintWriter(System.out, true, java.nio.charset.StandardCharsets.UTF_8);
+    PrintWriter out;
+    try {
+      out = output != null
+          ? new PrintWriter(java.nio.file.Files.newBufferedWriter(output,
+              java.nio.charset.StandardCharsets.UTF_8))
+          : new PrintWriter(System.out, true, java.nio.charset.StandardCharsets.UTF_8);
+    } catch (java.io.IOException e) {
+      System.err.println("Cannot write to " + output + ": " + e.getMessage());
+      return 2;
+    }
+    try (out) {
+      return run(out);
+    }
+  }
+
+  private int run(PrintWriter out) {
     List<Rule> rules = RuleRegistry.loadAll();
+    if (catalog) {
+      printCatalog(rules, out);
+      return 0;
+    }
     if (!explain.isEmpty()) {
       return explainRule(rules, out);
     }
@@ -72,7 +103,11 @@ public final class Main implements Callable<Integer> {
     CompilationDriver driver = new CompilationDriver(release, classpath);
     AnalysisResult result = driver.analyzePaths(paths, rules);
 
-    Reporter reporter = "json".equals(format) ? new JsonReporter() : new ConsoleReporter();
+    Reporter reporter = switch (format) {
+      case "json" -> new JsonReporter();
+      case "sarif" -> new SarifReporter();
+      default -> new ConsoleReporter();
+    };
     reporter.report(result.findings(), out);
     for (Map.Entry<Path, String> skip : result.skippedFiles().entrySet()) {
       out.println("skipped (does not compile): " + skip.getKey() + " — " + skip.getValue());
@@ -96,6 +131,30 @@ public final class Main implements Callable<Integer> {
     }
     out.println("Unknown rule id: " + explain);
     return 2;
+  }
+
+  /** Emits the rule catalog grouped by pack as a Markdown table, generated from metadata. */
+  private void printCatalog(List<Rule> rules, PrintWriter out) {
+    out.println("# Codekoll rule catalog");
+    out.println();
+    out.println("Generated from rule metadata — " + rules.size() + " rules.");
+    out.println();
+    java.util.Map<io.codekoll.api.RulePack, java.util.List<Rule>> byPack =
+        new java.util.EnumMap<>(io.codekoll.api.RulePack.class);
+    for (Rule rule : rules) {
+      byPack.computeIfAbsent(rule.pack(), k -> new java.util.ArrayList<>()).add(rule);
+    }
+    for (var entry : byPack.entrySet()) {
+      out.println("## " + entry.getKey().id() + " (" + entry.getValue().size() + ")");
+      out.println();
+      out.println("| Rule | Severity | What is wrong |");
+      out.println("|------|----------|---------------|");
+      for (Rule rule : entry.getValue()) {
+        out.printf("| `%s` | %s | %s |%n",
+            rule.id(), rule.defaultSeverity(), rule.description());
+      }
+      out.println();
+    }
   }
 
   private int exitCode(AnalysisResult result) {

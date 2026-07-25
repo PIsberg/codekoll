@@ -1,0 +1,29 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build fat jar
+        run: mvn -B -pl codekoll-cli -am package -DskipTests
+      - name: Regenerate perf charts + append data point
+        run: mvn -B -pl codekoll-load-test -am -Pfull verify -DskipTests || true
+      - name: Publish release with the fat jar
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            codekoll-cli/target/codekoll.jar
+            docs/perf/*.png

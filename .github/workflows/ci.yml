@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,9 +16,112 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Build, test, quality gates
-        run: mvn -B verify
-      - name: Smoke-test the fat jar
+      - name: Compile + unit/fixture tests
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli test
+      - name: Package fat jar
+        run: mvn -B -pl codekoll-cli -am package -DskipTests
+      - name: Smoke-test the jar
         run: java -jar codekoll-cli/target/codekoll.jar --help
-      - name: Demo run on examples (all rules fire)
-        run: java -jar codekoll-cli/target/codekoll.jar --fail-on never codekoll-examples/src/main/java
+
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Checkstyle
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli checkstyle:check
+      - name: PMD
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli pmd:check
+      - name: SpotBugs + find-sec-bugs
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli -DskipTests package spotbugs:check
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: JaCoCo report + threshold check
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: '**/target/site/jacoco/'
+
+  archunit:
+    name: archunit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Architecture tests
+        run: mvn -B -pl codekoll-cli -am test -Dtest=ArchitectureTest
+
+  examples:
+    name: examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Example verification (all rules fire, fixed variants silent, docs complete)
+        run: mvn -B -pl codekoll-examples -am test
+
+  selfcheck:
+    name: selfcheck
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build jar
+        run: mvn -B -pl codekoll-cli -am package -DskipTests
+      - name: Run codekoll on its own sources (SARIF)
+        run: |
+          java -jar codekoll-cli/target/codekoll.jar --format sarif --output codekoll.sarif --fail-on error \
+            codekoll-api/src/main/java codekoll-engine/src/main/java codekoll-rules/src/main/java \
+            codekoll-report/src/main/java codekoll-cli/src/main/java
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codekoll.sarif
+
+  loadtest:
+    name: loadtest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Perf quick profile (fails on regression vs baseline)
+        run: mvn -B -pl codekoll-load-test -am -Pquick verify -DskipTests
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-charts
+          path: docs/perf/
