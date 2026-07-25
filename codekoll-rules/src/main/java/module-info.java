@@ -28,6 +28,8 @@ module io.codekoll.rules {
       io.codekoll.rules.security.TrustAllRule,
       io.codekoll.rules.security.SqlConcatRule,
       io.codekoll.rules.security.ExecConcatRule,
+      io.codekoll.rules.security.XxeFactoryRule,
+      io.codekoll.rules.security.RedosRule,
       io.codekoll.rules.correctness.IgnoredReturnRule,
       io.codekoll.rules.correctness.RefEqualityRule,
       io.codekoll.rules.correctness.SelfAssignRule,
