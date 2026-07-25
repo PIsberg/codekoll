@@ -41,6 +41,10 @@ module io.codekoll.rules {
       io.codekoll.rules.numeric.IntDivFloatRule,
       io.codekoll.rules.numeric.AbsOverflowRule,
       io.codekoll.rules.performance.StrConcatLoopRule,
+      io.codekoll.rules.performance.RegexInLoopRule,
+      io.codekoll.rules.performance.KeysetGetRule,
+      io.codekoll.rules.performance.NewWrapperRule,
+      io.codekoll.rules.performance.BoxedAccumulatorRule,
       io.codekoll.rules.nullness.ImpossibleCondRule,
       io.codekoll.rules.apimisuse.GenericMismatchRule;
 }
