@@ -26,6 +26,11 @@ io.codekoll.rules.correctness.OptionalNullRule
 io.codekoll.rules.correctness.SbCharCtorRule
 io.codekoll.rules.correctness.NanCompareRule
 io.codekoll.rules.correctness.ArrayObjectMethodsRule
+io.codekoll.rules.correctness.DefaultCharsetRule
+io.codekoll.rules.correctness.EqualsHashcodeRule
+io.codekoll.rules.correctness.WeekYearFormatRule
+io.codekoll.rules.correctness.BigdecimalDoubleRule
+io.codekoll.rules.correctness.AssignInCondRule
 io.codekoll.rules.numeric.ShiftOobRule
 io.codekoll.rules.numeric.DivZeroRule
 io.codekoll.rules.numeric.CompareSubtractRule
