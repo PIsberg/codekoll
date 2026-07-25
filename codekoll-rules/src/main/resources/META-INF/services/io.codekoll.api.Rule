@@ -42,6 +42,10 @@ io.codekoll.rules.performance.KeysetGetRule
 io.codekoll.rules.performance.NewWrapperRule
 io.codekoll.rules.performance.BoxedAccumulatorRule
 io.codekoll.rules.nullness.ImpossibleCondRule
+io.codekoll.rules.frameworks.ProxyAnnotationInvisibleRule
+io.codekoll.rules.frameworks.InjectStaticRule
+io.codekoll.rules.frameworks.TestInvisibleRule
+io.codekoll.rules.frameworks.Slf4jPlaceholderRule
 io.codekoll.rules.modern.SealedSwitchDefaultRule
 io.codekoll.rules.modern.RecordArrayComponentRule
 io.codekoll.rules.modern.StreamReuseRule

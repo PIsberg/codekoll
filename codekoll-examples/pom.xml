@@ -36,5 +36,12 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <!-- Analysis target for the frameworks-pack examples (CK-SLF4J-PLACEHOLDER), not a
+           runtime dependency of codekoll itself. -->
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.17</version>
+    </dependency>
   </dependencies>
 </project>
