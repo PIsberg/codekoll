@@ -11,6 +11,11 @@ io.codekoll.rules.concurrency.VolatileCompoundRule
 io.codekoll.rules.concurrency.StaticDateFormatRule
 io.codekoll.rules.concurrency.SleepInSyncRule
 io.codekoll.rules.security.WeakCryptoRule
+io.codekoll.rules.security.HardcodedSecretRule
+io.codekoll.rules.security.WeakTlsRule
+io.codekoll.rules.security.InsecureRandomRule
+io.codekoll.rules.security.PlainHttpRule
+io.codekoll.rules.security.NativeDeserialRule
 io.codekoll.rules.correctness.IgnoredReturnRule
 io.codekoll.rules.correctness.RefEqualityRule
 io.codekoll.rules.correctness.SelfAssignRule
