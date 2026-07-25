@@ -42,6 +42,10 @@ io.codekoll.rules.performance.KeysetGetRule
 io.codekoll.rules.performance.NewWrapperRule
 io.codekoll.rules.performance.BoxedAccumulatorRule
 io.codekoll.rules.nullness.ImpossibleCondRule
+io.codekoll.rules.modern.SealedSwitchDefaultRule
+io.codekoll.rules.modern.RecordArrayComponentRule
+io.codekoll.rules.modern.StreamReuseRule
+io.codekoll.rules.modern.ChronoUnsupportedRule
 io.codekoll.rules.apimisuse.GenericMismatchRule
 io.codekoll.rules.apimisuse.ToArrayCastRule
 io.codekoll.rules.apimisuse.RegexMetaLiteralRule
