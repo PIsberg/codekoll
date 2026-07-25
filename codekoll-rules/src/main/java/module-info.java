@@ -46,5 +46,9 @@ module io.codekoll.rules {
       io.codekoll.rules.performance.NewWrapperRule,
       io.codekoll.rules.performance.BoxedAccumulatorRule,
       io.codekoll.rules.nullness.ImpossibleCondRule,
-      io.codekoll.rules.apimisuse.GenericMismatchRule;
+      io.codekoll.rules.apimisuse.GenericMismatchRule,
+      io.codekoll.rules.apimisuse.ToArrayCastRule,
+      io.codekoll.rules.apimisuse.RegexMetaLiteralRule,
+      io.codekoll.rules.apimisuse.RemoveIntAmbiguousRule,
+      io.codekoll.rules.apimisuse.ToMapDuplicatesRule;
 }
