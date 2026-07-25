@@ -63,7 +63,8 @@ public final class EqualsHashcodeRule extends AbstractRule {
           for (Tree member : node.getMembers()) {
             if (member instanceof MethodTree method && method.getBody() != null) {
               if (method.getName().contentEquals("equals")
-                  && method.getParameters().size() == 1) {
+                  && method.getParameters().size() == 1
+                  && "Object".equals(simpleTypeName(method.getParameters().get(0)))) {
                 hasEquals = true;
               } else if (method.getName().contentEquals("hashCode")
                   && method.getParameters().isEmpty()) {
@@ -79,6 +80,13 @@ public final class EqualsHashcodeRule extends AbstractRule {
           }
         }
         return super.visitClass(node, ctx);
+      }
+
+      /** Simple name of a parameter's declared type (e.g. "Object", "String"). */
+      private String simpleTypeName(com.sun.source.tree.VariableTree param) {
+        String text = param.getType().toString();
+        int dot = text.lastIndexOf('.');
+        return dot < 0 ? text : text.substring(dot + 1);
       }
     };
   }

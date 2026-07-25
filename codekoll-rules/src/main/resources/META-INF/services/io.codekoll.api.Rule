@@ -38,6 +38,11 @@ io.codekoll.rules.correctness.EqualsIncompatibleRule
 io.codekoll.rules.correctness.ToStringArrayRule
 io.codekoll.rules.correctness.UrlEqualsRule
 io.codekoll.rules.correctness.SwitchFallthroughRule
+io.codekoll.rules.correctness.CollectionSelfAddRule
+io.codekoll.rules.correctness.InfiniteRecursionRule
+io.codekoll.rules.correctness.EqualsOverloadRule
+io.codekoll.rules.correctness.BigdecimalEqualsRule
+io.codekoll.rules.correctness.FormatMismatchRule
 io.codekoll.rules.numeric.ShiftOobRule
 io.codekoll.rules.numeric.DivZeroRule
 io.codekoll.rules.numeric.CompareSubtractRule
