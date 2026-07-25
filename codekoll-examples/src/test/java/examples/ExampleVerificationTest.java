@@ -80,12 +80,13 @@ class ExampleVerificationTest {
 
   @Test
   void everyRuleHasAnExampleClassByNamingConvention() throws IOException {
+    // Case-insensitive: CK-STATIC-DATEFORMAT ↔ StaticDateFormatExample both allowed.
     Set<String> exampleClassNames = exampleFiles().stream()
-        .map(p -> p.getFileName().toString())
+        .map(p -> p.getFileName().toString().toLowerCase(Locale.ROOT))
         .collect(Collectors.toSet());
     for (Rule rule : rules) {
       String expectedName = exampleClassName(rule.id().value());
-      assertTrue(exampleClassNames.contains(expectedName),
+      assertTrue(exampleClassNames.contains(expectedName.toLowerCase(Locale.ROOT)),
           rule.id() + " needs example class " + expectedName);
     }
   }
