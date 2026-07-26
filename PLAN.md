@@ -1,6 +1,6 @@
 # Codekoll — Implementation Plan
 
-Companion to [SPEC.md](SPEC.md). Milestones are ordered so that every milestone ends with a runnable, testable tool. Rules land in waves: the nine founding rules first (easiest → hardest, per SPEC §5), then the extended catalog (SPEC §6) in two difficulty waves — **106 rules total** across ten packs.
+Companion to [SPEC.md](SPEC.md). Milestones are ordered so that every milestone ends with a runnable, testable tool. Rules land in waves: the nine founding rules first (easiest → hardest, per SPEC §5), then the extended catalog (SPEC §6) in two difficulty waves — **106 rules total** across ten packs. (That was the v1 target and is what the Milestone 6–10 exit criteria below are written against; the catalog has since grown to **114 specified rules** — see the SPEC §4 table, which is authoritative for the current count.)
 
 **Standing quality bar (applies to every milestone, not just the last one):**
 Codekoll is a static analysis tool, so it must hold itself to the standard it enforces on others. From Milestone 0 onward, `mvn verify` runs and **fails the build** on any violation from: Checkstyle, PMD, SpotBugs (+findsecbugs), Error Prone, NullAway (JSpecify nullness), ArchUnit, and JaCoCo coverage thresholds (**≥ 90 % line / ≥ 85 % branch** on production modules). No milestone is complete while any gate is red or suppressed without a written justification comment.
