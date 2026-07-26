@@ -7,6 +7,7 @@
 ![archunit](https://img.shields.io/badge/archunit-passing-brightgreen)
 ![loadtest](https://img.shields.io/badge/loadtest-baseline%20v0-blue)
 ![rules](https://img.shields.io/badge/rules-102-blue)
+![license](https://img.shields.io/badge/license-MIT-blue)
 
 <!-- Badges point at the named CI jobs in .github/workflows/ci.yml (build, quality,
      coverage, archunit, examples, selfcheck, loadtest). Swap the shields.io placeholders
@@ -101,3 +102,7 @@ In active development — see [PLAN.md](PLAN.md) for the milestone roadmap and [
 Performance is held to the same standard: a load-test harness (`codekoll-load-test`) measures CPU and peak memory on every build against a committed baseline, fails CI on regression, and charts every version — the trend diagrams live in [`docs/perf/`](docs/perf/).
 
 <!-- docs/perf/trend.png embedded here once baseline v0 exists (Milestone 9) -->
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
