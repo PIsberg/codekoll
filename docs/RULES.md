@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 105 rules.
+Generated from rule metadata — 106 rules.
 
 ## correctness (25)
 
@@ -102,12 +102,13 @@ Generated from rule metadata — 105 rules.
 | `CK-REGEX-IN-LOOP` | WARNING | Constant regex compiled inside a loop |
 | `CK-STR-CONCAT-LOOP` | WARNING | String concatenation accumulating across loop iterations |
 
-## api-misuse (10)
+## api-misuse (11)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-COMPUTE-IF-ABSENT-MOD` | ERROR | Map modified inside its own computeIfAbsent lambda |
 | `CK-GENERIC-MISMATCH` | ERROR | Argument type can never match the collection's key/element type |
+| `CK-IMMUTABLE-FACTORY-DUPLICATE` | ERROR | Duplicate constant element in Set.of or duplicate key in Map.of — always throws |
 | `CK-IMMUTABLE-FACTORY-NULL` | ERROR | null passed to List.of/Set.of/Map.of — these factories reject null and always throw |
 | `CK-IMMUTABLE-MUTATE` | ERROR | Mutating an immutable/fixed-size collection |
 | `CK-LOCALE-CASE` | INFO | toUpperCase/toLowerCase without an explicit Locale |
