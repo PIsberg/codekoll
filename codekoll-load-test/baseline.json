@@ -1,4 +1,4 @@
 [
   {"tier":"small","sourceLines":3347,"findings":101,"wallMillis":851,"cpuMillis":2281,"peakHeapBytes":53874984},
-  {"tier":"100k","sourceLines":100000,"findings":0,"wallMillis":17182,"cpuMillis":17859,"peakHeapBytes":62723048}
+  {"tier":"100k","sourceLines":100000,"findings":0,"wallMillis":6450,"cpuMillis":6519,"peakHeapBytes":117041208}
 ]
