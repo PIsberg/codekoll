@@ -104,6 +104,7 @@ module io.codekoll.rules {
       io.codekoll.rules.modern.ArenaUseAfterCloseRule,
       io.codekoll.rules.apimisuse.GenericMismatchRule,
       io.codekoll.rules.apimisuse.SyspropParseRule,
+      io.codekoll.rules.apimisuse.ImmutableFactoryNullRule,
       io.codekoll.rules.apimisuse.ToArrayCastRule,
       io.codekoll.rules.apimisuse.RegexMetaLiteralRule,
       io.codekoll.rules.apimisuse.RemoveIntAmbiguousRule,

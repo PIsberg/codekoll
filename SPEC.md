@@ -182,11 +182,11 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `resources` | Leaks, exception handling, cleanup | 9 |
 | `security` | Weak crypto, injection, secrets, TLS, ReDoS | 11 |
 | `performance` | Accidentally-quadratic and allocation churn | 6 |
-| `api-misuse` | Standard-library contracts violated | 9 |
+| `api-misuse` | Standard-library contracts violated | 10 |
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
-| **Total** | | **108** |
+| **Total** | | **109** |
 
 ---
 
@@ -396,6 +396,7 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local and 
 | `CK-LOCALE-CASE` | I | `toUpperCase()`/`toLowerCase()` (no-arg, default-locale) whose result feeds `equals`/`switch`/`Map` key usage — Turkish-ı breaks case-insensitive protocol comparisons. Suggest `Locale.ROOT` or `equalsIgnoreCase`. |
 | `CK-COMPUTE-IF-ABSENT-MOD` | E | Lambda passed to `Map.computeIfAbsent/computeIfPresent/compute/merge` whose body structurally modifies the **same map symbol** (`put`, `remove`, `clear`, another `compute*`) — `HashMap` throws `ConcurrentModificationException` since JDK 9 (and silently corrupted before that). Restructure to compute the value first, then insert. |
 | `CK-REMOVE-INT-AMBIGUOUS` | W | `list.remove(intExpr)` on a `List<Integer>` — overload resolution picks `remove(int index)`, not `remove(Object)`: `list.remove(1)` removes the element **at index 1**, not the value `1` (and may throw `IndexOutOfBoundsException`). Use `list.remove(Integer.valueOf(1))` for by-value removal. |
+| `CK-IMMUTABLE-FACTORY-NULL` | E | A `null` literal (bare, parenthesized, or cast — `(String) null`) in any argument of `List.of`/`Set.of`/`Map.of`/`Map.ofEntries`/`Map.entry`/`copyOf`, receiver resolving to `java.util.List/Set/Map`. These factories forbid null by contract → guaranteed `NullPointerException`, which in a `static final` initializer surfaces as `ExceptionInInitializerError`/`NoClassDefFoundError` far from the cause. *(Exempt the null-tolerant factories `Arrays.asList`, `Collections.singletonList`, and mutable collections; exempt a non-literal argument that merely happens to be null at runtime — v1 does not track values across methods.)* |
 | `CK-SYSPROP-PARSE` | W | `Boolean.getBoolean(x)` / `Integer.getInteger(x)` / `Long.getLong(x)` (receiver resolving to the `java.lang` wrapper) where `x` is not a property name: either a compile-time constant that reads as a **value** (`"true"`, `"false"`, an integer literal), or a **non-constant** expression containing no dotted string literal. These methods take a system-property *name*, not a value — the call silently returns `false`/`null` forever. Suggest `parseBoolean`/`parseInt`/`parseLong`. *(Exempt any argument carrying a dotted string constant — `"acme.debug"`, `"acme.pool." + name` — and any other compile-time constant, e.g. `"timeout"`: those are property names. Residual gap: a genuinely dynamic, undotted property name in a variable is flagged; suppress per site.)* |
 | `CK-TOMAP-DUPLICATES` | I | Two-argument `Collectors.toMap(keyFn, valueFn)` — throws `IllegalStateException: Duplicate key` the first time two elements map to the same key, which is typically discovered in production data, not tests. Add the merge function (third argument) or state why keys are unique. *(Exempt when the key function is `identity()` over a `Set` source.)* |
 
