@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 108 rules.
+Generated from rule metadata — 109 rules.
 
 ## correctness (26)
 
@@ -103,7 +103,7 @@ Generated from rule metadata — 108 rules.
 | `CK-REGEX-IN-LOOP` | WARNING | Constant regex compiled inside a loop |
 | `CK-STR-CONCAT-LOOP` | WARNING | String concatenation accumulating across loop iterations |
 
-## api-misuse (12)
+## api-misuse (13)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
@@ -114,6 +114,7 @@ Generated from rule metadata — 108 rules.
 | `CK-IMMUTABLE-MUTATE` | ERROR | Mutating an immutable/fixed-size collection |
 | `CK-LOCALE-CASE` | INFO | toUpperCase/toLowerCase without an explicit Locale |
 | `CK-PRIMITIVE-ARRAY-VARARGS` | WARNING | Primitive array passed to Arrays.asList/Stream.of — wrapped as one element, not spread |
+| `CK-REGEX-GROUP-INDEX` | ERROR | Capturing group referenced that the regex does not have |
 | `CK-REGEX-META-LITERAL` | ERROR | split/replaceAll with a bare regex metacharacter literal |
 | `CK-REMOVE-INT-AMBIGUOUS` | WARNING | List<Integer>.remove(int) removes by INDEX, not by value |
 | `CK-SYSPROP-PARSE` | WARNING | Boolean.getBoolean/Integer.getInteger/Long.getLong read a system property, they do not parse their argument |

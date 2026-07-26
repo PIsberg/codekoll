@@ -108,6 +108,7 @@ module io.codekoll.rules {
       io.codekoll.rules.apimisuse.ImmutableFactoryNullRule,
       io.codekoll.rules.apimisuse.ImmutableFactoryDuplicateRule,
       io.codekoll.rules.apimisuse.PrimitiveArrayVarargsRule,
+      io.codekoll.rules.apimisuse.RegexGroupIndexRule,
       io.codekoll.rules.apimisuse.ToArrayCastRule,
       io.codekoll.rules.apimisuse.RegexMetaLiteralRule,
       io.codekoll.rules.apimisuse.RemoveIntAmbiguousRule,
