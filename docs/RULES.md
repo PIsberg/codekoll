@@ -1,12 +1,13 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 102 rules.
+Generated from rule metadata — 110 rules.
 
-## correctness (24)
+## correctness (26)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-ARRAY-OBJECT-METHODS` | ERROR | equals/hashCode/toString on an array uses identity, not contents |
+| `CK-ASSERT-SIDE-EFFECT` | WARNING | State changed inside an assert — skipped entirely when assertions are disabled |
 | `CK-ASSIGN-IN-COND` | WARNING | Assignment (=) used directly as a boolean condition |
 | `CK-BIGDECIMAL-DOUBLE` | WARNING | new BigDecimal(double) carries binary imprecision into exact arithmetic |
 | `CK-BIGDECIMAL-EQUALS` | INFO | BigDecimal.equals is scale-sensitive (1.0 != 1.00) |
@@ -20,6 +21,7 @@ Generated from rule metadata — 102 rules.
 | `CK-FORMAT-MISMATCH` | ERROR | Format string conversions do not match the arguments |
 | `CK-IGNORED-RETURN` | WARNING | Return value of a pure method on an immutable type is discarded |
 | `CK-INFINITE-RECURSION` | ERROR | Method unconditionally calls itself (infinite recursion) |
+| `CK-ITERATOR-DOUBLE-NEXT` | WARNING | Loop guarded by hasNext() calls next() twice in one iteration |
 | `CK-NAN-COMPARE` | ERROR | == or != against Double.NaN is constant by IEEE 754 |
 | `CK-OPTIONAL-NULL` | ERROR | return null from an Optional-returning method |
 | `CK-REF-EQUALITY` | ERROR | == or != on String/boxed types compares references, not values |
@@ -44,10 +46,11 @@ Generated from rule metadata — 102 rules.
 | `CK-OCTAL-LITERAL` | WARNING | Integer literal with a leading zero is octal, not decimal |
 | `CK-SHIFT-OOB` | ERROR | Shift distance >= width of the shifted type |
 
-## concurrency (11)
+## concurrency (12)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
+| `CK-ATOMIC-READ-MODIFY-WRITE` | WARNING | Atomic updated by set(get() ...) — a two-step read-modify-write, not an atomic one |
 | `CK-CONCURRENT-MOD` | ERROR | Collection modified while iterating it with for-each |
 | `CK-CTOR-THREAD-START` | WARNING | Thread started from inside a constructor |
 | `CK-DCL-NO-VOLATILE` | WARNING | Double-checked locking on a non-volatile field |
@@ -101,16 +104,21 @@ Generated from rule metadata — 102 rules.
 | `CK-REGEX-IN-LOOP` | WARNING | Constant regex compiled inside a loop |
 | `CK-STR-CONCAT-LOOP` | WARNING | String concatenation accumulating across loop iterations |
 
-## api-misuse (8)
+## api-misuse (13)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-COMPUTE-IF-ABSENT-MOD` | ERROR | Map modified inside its own computeIfAbsent lambda |
 | `CK-GENERIC-MISMATCH` | ERROR | Argument type can never match the collection's key/element type |
+| `CK-IMMUTABLE-FACTORY-DUPLICATE` | ERROR | Duplicate constant element in Set.of or duplicate key in Map.of — always throws |
+| `CK-IMMUTABLE-FACTORY-NULL` | ERROR | null passed to List.of/Set.of/Map.of — these factories reject null and always throw |
 | `CK-IMMUTABLE-MUTATE` | ERROR | Mutating an immutable/fixed-size collection |
 | `CK-LOCALE-CASE` | INFO | toUpperCase/toLowerCase without an explicit Locale |
+| `CK-PRIMITIVE-ARRAY-VARARGS` | WARNING | Primitive array passed to Arrays.asList/Stream.of — wrapped as one element, not spread |
+| `CK-REGEX-GROUP-INDEX` | ERROR | Capturing group referenced that the regex does not have |
 | `CK-REGEX-META-LITERAL` | ERROR | split/replaceAll with a bare regex metacharacter literal |
 | `CK-REMOVE-INT-AMBIGUOUS` | WARNING | List<Integer>.remove(int) removes by INDEX, not by value |
+| `CK-SYSPROP-PARSE` | WARNING | Boolean.getBoolean/Integer.getInteger/Long.getLong read a system property, they do not parse their argument |
 | `CK-TOARRAY-CAST` | ERROR | Cast of no-arg toArray() to a specific array type |
 | `CK-TOMAP-DUPLICATES` | INFO | Collectors.toMap without a merge function throws on duplicate keys |
 
