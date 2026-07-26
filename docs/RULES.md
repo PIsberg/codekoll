@@ -1,8 +1,8 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 106 rules.
+Generated from rule metadata — 107 rules.
 
-## correctness (25)
+## correctness (26)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
@@ -21,6 +21,7 @@ Generated from rule metadata — 106 rules.
 | `CK-FORMAT-MISMATCH` | ERROR | Format string conversions do not match the arguments |
 | `CK-IGNORED-RETURN` | WARNING | Return value of a pure method on an immutable type is discarded |
 | `CK-INFINITE-RECURSION` | ERROR | Method unconditionally calls itself (infinite recursion) |
+| `CK-ITERATOR-DOUBLE-NEXT` | WARNING | Loop guarded by hasNext() calls next() twice in one iteration |
 | `CK-NAN-COMPARE` | ERROR | == or != against Double.NaN is constant by IEEE 754 |
 | `CK-OPTIONAL-NULL` | ERROR | return null from an Optional-returning method |
 | `CK-REF-EQUALITY` | ERROR | == or != on String/boxed types compares references, not values |

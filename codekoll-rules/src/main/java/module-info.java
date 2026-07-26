@@ -46,6 +46,7 @@ module io.codekoll.rules {
       io.codekoll.rules.correctness.BigdecimalDoubleRule,
       io.codekoll.rules.correctness.AssignInCondRule,
       io.codekoll.rules.correctness.AssertSideEffectRule,
+      io.codekoll.rules.correctness.IteratorDoubleNextRule,
       io.codekoll.rules.correctness.EqualsIncompatibleRule,
       io.codekoll.rules.correctness.ToStringArrayRule,
       io.codekoll.rules.correctness.UrlEqualsRule,
