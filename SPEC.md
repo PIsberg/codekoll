@@ -176,7 +176,7 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 
 | Pack | Focus | Rules |
 |---|---|---|
-| `correctness` | Logic that is provably or almost-certainly wrong | 26 |
+| `correctness` | Logic that is provably or almost-certainly wrong | 27 |
 | `numeric` | Arithmetic and overflow traps | 8 |
 | `concurrency` | Threading and synchronization | 13 |
 | `resources` | Leaks, exception handling, cleanup | 9 |
@@ -186,7 +186,7 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
-| **Total** | | **106** |
+| **Total** | | **107** |
 
 ---
 
@@ -308,6 +308,7 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local and 
 | `CK-SWITCH-FALLTHROUGH` | I | Statement-`switch` case with executable statements that falls into the next case without `break`/`yield`/`return`/`throw` and without a `// fall through` comment. *(Empty grouped cases exempt; arrow-form `switch` can't fall through.)* |
 | `CK-DEFAULT-CHARSET` | W | `String.getBytes()`, `new String(byte[])`, `new FileReader/FileWriter(...)`, `new InputStreamReader/OutputStreamWriter(stream)` **without an explicit charset** — behavior depends on the platform default; data written on one machine reads as mojibake on another. Pass `StandardCharsets.UTF_8`. |
 | `CK-ARRAY-AS-KEY` | E | An array type used as a `Map` key or `Set` element type argument (`Map<int[], V>`, `Set<byte[]>`), or an array-typed argument to `contains`/`get`/`remove` on a hash collection — arrays use identity `hashCode`/`equals`, so lookups **never match** a different array with equal contents. Wrap in `List`/record, or use a `TreeMap` with `Arrays::compare`. |
+| `CK-ASSERT-SIDE-EFFECT` | W | An `assert` whose condition or detail message changes state: an assignment, a compound assignment, an increment/decrement, or an invocation of a known mutator (`add`/`put`/`remove`/`next`/`append`/`incrementAndGet`/…) on a receiver resolving to `Collection`, `Map`, `Iterator`, `StringBuilder`/`StringBuffer` or an `Atomic*`. Assertions are disabled without `-ea`, so the mutation happens under test and silently never happens in production. *(Unqualified calls with no visible receiver, and mutator-named methods on any other receiver type, are never flagged — the name alone is not evidence.)* |
 | `CK-WALLCLOCK-ELAPSED` | I | Elapsed time measured by subtracting two `System.currentTimeMillis()` readings — wall-clock time jumps (NTP corrections, DST, leap smearing), producing negative or wildly wrong durations. Use `System.nanoTime()` for intervals. |
 
 *(Founding rules CK-IGNORED-RETURN and CK-REF-EQUALITY also belong to this pack — §5.4, §5.5.)*

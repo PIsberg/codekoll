@@ -1,12 +1,13 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 102 rules.
+Generated from rule metadata — 103 rules.
 
-## correctness (24)
+## correctness (25)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-ARRAY-OBJECT-METHODS` | ERROR | equals/hashCode/toString on an array uses identity, not contents |
+| `CK-ASSERT-SIDE-EFFECT` | WARNING | State changed inside an assert — skipped entirely when assertions are disabled |
 | `CK-ASSIGN-IN-COND` | WARNING | Assignment (=) used directly as a boolean condition |
 | `CK-BIGDECIMAL-DOUBLE` | WARNING | new BigDecimal(double) carries binary imprecision into exact arithmetic |
 | `CK-BIGDECIMAL-EQUALS` | INFO | BigDecimal.equals is scale-sensitive (1.0 != 1.00) |
