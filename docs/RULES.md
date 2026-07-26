@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 109 rules.
+Generated from rule metadata — 110 rules.
 
 ## correctness (26)
 
@@ -46,10 +46,11 @@ Generated from rule metadata — 109 rules.
 | `CK-OCTAL-LITERAL` | WARNING | Integer literal with a leading zero is octal, not decimal |
 | `CK-SHIFT-OOB` | ERROR | Shift distance >= width of the shifted type |
 
-## concurrency (11)
+## concurrency (12)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
+| `CK-ATOMIC-READ-MODIFY-WRITE` | WARNING | Atomic updated by set(get() ...) — a two-step read-modify-write, not an atomic one |
 | `CK-CONCURRENT-MOD` | ERROR | Collection modified while iterating it with for-each |
 | `CK-CTOR-THREAD-START` | WARNING | Thread started from inside a constructor |
 | `CK-DCL-NO-VOLATILE` | WARNING | Double-checked locking on a non-volatile field |

@@ -178,7 +178,7 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 |---|---|---|
 | `correctness` | Logic that is provably or almost-certainly wrong | 28 |
 | `numeric` | Arithmetic and overflow traps | 8 |
-| `concurrency` | Threading and synchronization | 13 |
+| `concurrency` | Threading and synchronization | 14 |
 | `resources` | Leaks, exception handling, cleanup | 9 |
 | `security` | Weak crypto, injection, secrets, TLS, ReDoS | 11 |
 | `performance` | Accidentally-quadratic and allocation churn | 6 |
@@ -186,7 +186,7 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
-| **Total** | | **113** |
+| **Total** | | **114** |
 
 ---
 
@@ -335,6 +335,7 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local and 
 | `CK-SYNC-ON-VALUE` | E | `synchronized (expr)` where `expr`'s type is `String`, a boxed primitive, or the result of `Integer.valueOf`-style caching — these are interned/shared, so unrelated code can deadlock with you or your lock is not exclusive. |
 | `CK-MONITOR-ON-LOCK` | E | `synchronized (expr)` where `expr`'s type implements `java.util.concurrent.locks.Lock` — the monitor and the `Lock` are independent mechanisms; this provides **zero** mutual exclusion against threads using `lock()`/`unlock()`. Suggest `lock.lock()` in a try/finally. |
 | `CK-DCL-NO-VOLATILE` | W | Double-checked locking shape: `if (f == null) { synchronized (…) { if (f == null) { f = …; } } }` where field `f` is **not** `volatile`. Broken publication under the JMM. |
+| `CK-ATOMIC-READ-MODIFY-WRITE` | W | `x.set(...)`/`x.lazySet(...)` on an `AtomicInteger`/`AtomicLong`/`AtomicBoolean`/`AtomicReference` whose new value is computed from `x.get()` on the **same variable** — two atomic operations with a gap, not one atomic update, so a concurrent update is silently lost. Suggest `incrementAndGet`/`addAndGet`/`updateAndGet`/`accumulateAndGet`. *(Exempt when a lock already spans both steps: inside a `synchronized` block or a `synchronized` method. Exempt reading a different atomic, and writing an independent value. Known gap: the read and write split across separate statements — v1 does not track the intermediate local.)* |
 | `CK-VOLATILE-COMPOUND` | W | `++`, `--`, or compound assignment (`+=`, …) targeting a `volatile` field — read-modify-write is not atomic and `volatile` does not make it so; concurrent increments are lost. Suggest `AtomicInteger`/`AtomicLong` or a lock. |
 | `CK-WAIT-NO-LOOP` | W | `Object.wait()`/`Condition.await()` whose enclosing statement chain contains no loop before the enclosing method — spurious wakeups make un-looped waits incorrect. |
 | `CK-STATIC-DATEFORMAT` | E | `static` field (non-`ThreadLocal`) whose type is `SimpleDateFormat`, `DateFormat`, `Calendar`, or `NumberFormat` — documented non-thread-safe; shared static instances corrupt state under concurrency. Suggest `DateTimeFormatter` (immutable) or `ThreadLocal`. |

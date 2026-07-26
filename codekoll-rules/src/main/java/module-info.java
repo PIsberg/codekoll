@@ -17,6 +17,7 @@ module io.codekoll.rules {
       io.codekoll.rules.concurrency.SyncOnValueRule,
       io.codekoll.rules.concurrency.MonitorOnLockRule,
       io.codekoll.rules.concurrency.VolatileCompoundRule,
+      io.codekoll.rules.concurrency.AtomicReadModifyWriteRule,
       io.codekoll.rules.concurrency.StaticDateFormatRule,
       io.codekoll.rules.concurrency.SleepInSyncRule,
       io.codekoll.rules.security.WeakCryptoRule,
