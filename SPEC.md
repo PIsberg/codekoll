@@ -133,6 +133,11 @@ public interface Rule {
 
 ### 3.4 Configuration
 
+> **Superseded for running against a foreign repository.** [docs/CLI-SPEC.md](docs/CLI-SPEC.md)
+> specifies the full configuration layering (user config → target-repo config → CLI), the complete
+> schema, and the rule that a target repo's own config may not grant itself build execution. This
+> section describes the minimal in-repo form; where the two disagree, CLI-SPEC.md wins.
+
 `codekoll.toml` at project root (all optional):
 
 ```toml
@@ -151,6 +156,12 @@ paths = ["**/generated/**", "**/target/**"]
 - CLI flags override config file.
 
 ### 3.5 CLI
+
+> **The authoritative CLI surface is [docs/CLI-SPEC.md §11](docs/CLI-SPEC.md#11-cli-surface).**
+> The flag set below is the v1 core; CLI-SPEC.md adds workspace discovery (`--repo`,
+> `--print-workspace`), classpath resolution (`--resolve`), degraded-mode gating
+> (`--min-attribution`), and adoption flags (`--baseline`, `--changed-since`). Exit codes are
+> unchanged: `0` below threshold, `1` at/above threshold, `2` usage/internal error.
 
 ```
 codekoll [OPTIONS] <path>...

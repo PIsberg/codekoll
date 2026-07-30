@@ -9,4 +9,33 @@
     <Class name="~io\.codekoll\.rules\.security\.WeakCryptoRule.*"/>
     <Bug pattern="IMPROPER_UNICODE"/>
   </Match>
+
+  <!-- PomReader.secureBuilder() sets FEATURE_SECURE_PROCESSING, disallow-doctype-decl, both
+       external-entity features, XIncludeAware(false), expandEntityReferences(false) and empty
+       ACCESS_EXTERNAL_DTD/ACCESS_EXTERNAL_SCHEMA before returning the DocumentBuilder that
+       read() calls parse() on. find-sec-bugs' XXE detector is intraprocedural and cannot see
+       hardening applied in a helper method, so it flags the parse() call site instead. The
+       hardening is asserted directly by PomReaderTest#rejectsExternalEntities. -->
+  <Match>
+    <Class name="~io\.codekoll\.workspace\.PomReader.*"/>
+    <Method name="read"/>
+    <Bug pattern="XXE_DOCUMENT"/>
+  </Match>
+
+  <!-- ResolveMode.parse() folds case with Locale.ROOT and then matches a closed set of four
+       literals, throwing on anything else. No case-folded string reaches a security decision:
+       the CLI-SPEC §4.3 trust gate is enforced on the parsed enum constant, never on this text. -->
+  <Match>
+    <Class name="~io\.codekoll\.workspace\.ResolveMode.*"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+
+  <!-- WorkspaceDiscovery.versionFile() lowercases a .tool-versions/.sdkmanrc line with
+       Locale.ROOT purely to test whether it names the ASCII token "java", deciding which line of
+       a multi-tool version file to read. Nothing security-relevant depends on the folded text. -->
+  <Match>
+    <Class name="~io\.codekoll\.workspace\.WorkspaceDiscovery.*"/>
+    <Method name="versionFile"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
 </FindBugsFilter>
