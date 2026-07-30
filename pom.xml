@@ -17,6 +17,7 @@
     <module>codekoll-engine</module>
     <module>codekoll-rules</module>
     <module>codekoll-report</module>
+    <module>codekoll-workspace</module>
     <module>codekoll-cli</module>
     <module>codekoll-examples</module>
     <module>codekoll-load-test</module>

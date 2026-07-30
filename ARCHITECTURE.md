@@ -21,6 +21,10 @@ codekoll-rules      io.codekoll.rules    Rule packs, one package per pack. Expor
                                          provides io.codekoll.api.Rule with <all rules>.
 codekoll-report     io.codekoll.report   Console/JSON reporters (SARIF in M10).
                                          Depends on api only — never on jdk.compiler.
+codekoll-workspace  io.codekoll.workspace  Target-repo discovery (M11): repo root, build system,
+                                         source units, per-unit language level, hermetic
+                                         classpath discovery. requires java.xml only — not
+                                         jdk.compiler, not api, not the engine.
 codekoll-cli        io.codekoll.cli      picocli front-end; shaded into codekoll.jar.
 codekoll-examples   (non-modular)        One documented buggy/fixed example class per rule
                                          + the E2E verification suite.
@@ -109,7 +113,8 @@ engine-side change swaps N full walks for one dispatching walk without touching 
   sources and enforces: findings ≙ markers exactly, every rule has a firing example, naming
   convention (`CK-EMPTY-CATCH` → `EmptyCatchExample.java`), and every example documents
   *What is wrong / What happens at runtime / How to fix*.
-- **ArchUnit** (`codekoll-cli`): the constraints above.
+- **ArchUnit** (`codekoll-cli`, plus `codekoll-workspace` for its own boundaries): the constraints
+  above. Discovery's rules live in the module they constrain so they travel with it.
 - **Dogfooding**: codekoll runs on its own production sources (`--fail-on error`) — see
   PLAN's standing dogfooding gate.
 
