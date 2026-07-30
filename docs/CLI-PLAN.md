@@ -78,9 +78,27 @@ Triage:
 - **Best true positive:** async-test-lib `LazyInitValidator` performs `|=` on four `volatile
   boolean` fields from a method called concurrently by design. Fixed upstream.
 
-Net effect of the four fixes, with no finding lost that was worth keeping (standing agreement 2):
-vibetags 15 -> 13, async-test-lib 27 -> 23, errors 2 -> 0. Everything removed was triaged as a
-false positive first and pinned by a fixture before the rule changed.
+- **Third false positive, same family:** CK-RESOURCE-LEAK flagged vibetags' `ForkJoinPool`,
+  which is released with `shutdown()` in a `finally` block. Disposal is not spelled `close()`
+  everywhere, and for an executor `shutdown()` is the ordinary idiom, so the rule now accepts
+  `close`, `shutdown`, `shutdownNow`, `dispose` and `release`. A pool that is never released at
+  all still reports (fixture P11).
+
+Net effect, with nothing lost that was worth keeping (standing agreement 2):
+
+| Repo | Before | After codekoll fixes | After upstream fixes |
+| --- | --- | --- | --- |
+| vibetags | 15 (0 error, 8 warning, 7 info) | 12 | 7, all INFO |
+| async-test-lib | 27 (2 error, 20 warning, 5 info) | 23 | 4, all INFO |
+
+Every removal was triaged as a false positive first and pinned by a fixture before the rule
+changed; the rest were fixed upstream, on a branch in each repo, and both repos now credit
+codekoll with a README badge. What remains in both is INFO only, and each item was read and
+accepted rather than suppressed: a deliberate `catch (Throwable)` in an annotation processor,
+`printStackTrace` in a Byte Buddy agent's `onError` where no logger is safe, `contains()` on
+short config lists, four private records built only from immutable lists, an
+`ObjectInputStream` read of a file the same process wrote, and one float comparison against an
+exact sentinel.
 
 ---
 

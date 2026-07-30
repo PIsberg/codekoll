@@ -38,6 +38,14 @@ public final class ResourceLeakRule extends AbstractRule {
 
   private static final RuleId ID = new RuleId("CK-RESOURCE-LEAK");
 
+  /**
+   * Disposal is not spelled {@code close()} everywhere. An ExecutorService released with
+   * {@code shutdown()} in a finally block is the pre-Java-19 idiom and is still the common one;
+   * flagging it as a leak is wrong.
+   */
+  private static final Set<String> DISPOSAL_METHODS =
+      Set.of("close", "shutdown", "shutdownNow", "dispose", "release");
+
   /** Closing these is a no-op; flagging them is pure noise. */
   private static final Set<String> NO_OP_CLOSEABLES = Set.of(
       "java.io.ByteArrayInputStream", "java.io.ByteArrayOutputStream",
@@ -211,7 +219,7 @@ public final class ResourceLeakRule extends AbstractRule {
           @Override
           public Boolean visitMethodInvocation(MethodInvocationTree call, Void unused) {
             if (call.getMethodSelect() instanceof MemberSelectTree select
-                && select.getIdentifier().contentEquals("close")
+                && DISPOSAL_METHODS.contains(select.getIdentifier().toString())
                 && select.getExpression().toString().equals(name)) {
               return true;
             }

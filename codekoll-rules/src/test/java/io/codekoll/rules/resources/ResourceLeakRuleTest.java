@@ -135,6 +135,41 @@ class ResourceLeakRuleTest {
         """);
   }
 
+  /**
+   * Found in the wild: vibetags' AIGuardrailProcessor creates a ForkJoinPool and releases it
+   * with shutdown() in a finally block, which is the ordinary idiom for an executor.
+   */
+  @Test
+  void allowsAnExecutorReleasedWithShutdown() {
+    RuleTestHarness.assertFixture(rule, "N11", """
+        import java.util.concurrent.ForkJoinPool;
+        class N11 {
+          void m() {
+            ForkJoinPool pool = new ForkJoinPool(2);
+            try {
+              pool.submit(() -> {}).join();
+            } finally {
+              pool.shutdown();
+            }
+          }
+        }
+        """);
+  }
+
+  /** An executor that is never released at all still reports. */
+  @Test
+  void flagsAnExecutorThatIsNeverReleased() {
+    RuleTestHarness.assertFixture(rule, "P11", """
+        import java.util.concurrent.ForkJoinPool;
+        class P11 {
+          void m() {
+            ForkJoinPool pool = new ForkJoinPool(2); // :: CK-RESOURCE-LEAK
+            pool.submit(() -> {}).join();
+          }
+        }
+        """);
+  }
+
   @Test
   void allowsNoOpCloseables() {
     RuleTestHarness.assertFixture(rule, "N6", """
