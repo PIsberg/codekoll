@@ -2,6 +2,7 @@ package io.codekoll.rules.resources;
 
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.MethodTree;
@@ -36,6 +37,14 @@ import org.jspecify.annotations.Nullable;
 public final class ResourceLeakRule extends AbstractRule {
 
   private static final RuleId ID = new RuleId("CK-RESOURCE-LEAK");
+
+  /**
+   * Disposal is not spelled {@code close()} everywhere. An ExecutorService released with
+   * {@code shutdown()} in a finally block is the pre-Java-19 idiom and is still the common one;
+   * flagging it as a leak is wrong.
+   */
+  private static final Set<String> DISPOSAL_METHODS =
+      Set.of("close", "shutdown", "shutdownNow", "dispose", "release");
 
   /** Closing these is a no-op; flagging them is pure noise. */
   private static final Set<String> NO_OP_CLOSEABLES = Set.of(
@@ -138,7 +147,52 @@ public final class ResourceLeakRule extends AbstractRule {
         if (symbol != null && symbol.getKind() == ElementKind.FIELD) {
           return true;  // field assignment: the owner closes it elsewhere
         }
-        return methodContainsClose(variablePath, variable.getName().toString());
+        String name = variable.getName().toString();
+        return methodContainsClose(variablePath, name)
+            || methodReleasesOwnership(variablePath, name);
+      }
+
+      /**
+       * A local that is returned, or handed to another call, has left this method's ownership:
+       * {@code var b = new Bridge(...); registry.start(b); return b;} is a factory, not a leak,
+       * and the caller is the one that must close it. This mirrors the ownership transfer the
+       * rule already recognises when the creation expression itself is returned or passed on.
+       */
+      private boolean methodReleasesOwnership(TreePath variablePath, String name) {
+        Tree body = enclosingMethodBody(variablePath);
+        if (body == null) {
+          return false;
+        }
+        return Boolean.TRUE.equals(new TreeScanner<Boolean, Void>() {
+          @Override
+          public Boolean visitReturn(ReturnTree node, Void unused) {
+            return isName(node.getExpression()) ? Boolean.TRUE : super.visitReturn(node, unused);
+          }
+
+          @Override
+          public Boolean visitMethodInvocation(MethodInvocationTree node, Void unused) {
+            return node.getArguments().stream().anyMatch(this::isName)
+                ? Boolean.TRUE : super.visitMethodInvocation(node, unused);
+          }
+
+          @Override
+          public Boolean reduce(@Nullable Boolean first, @Nullable Boolean second) {
+            return Boolean.TRUE.equals(first) || Boolean.TRUE.equals(second);
+          }
+
+          private boolean isName(@Nullable Tree expr) {
+            return expr instanceof IdentifierTree id && id.getName().contentEquals(name);
+          }
+        }.scan(body, null));
+      }
+
+      private @Nullable Tree enclosingMethodBody(TreePath path) {
+        for (TreePath p = path; p != null; p = p.getParentPath()) {
+          if (p.getLeaf() instanceof MethodTree method) {
+            return method.getBody();
+          }
+        }
+        return null;
       }
 
       private boolean isFieldOrClosed(TreePath assignmentPath, AssignmentTree assignment,
@@ -165,7 +219,7 @@ public final class ResourceLeakRule extends AbstractRule {
           @Override
           public Boolean visitMethodInvocation(MethodInvocationTree call, Void unused) {
             if (call.getMethodSelect() instanceof MemberSelectTree select
-                && select.getIdentifier().contentEquals("close")
+                && DISPOSAL_METHODS.contains(select.getIdentifier().toString())
                 && select.getExpression().toString().equals(name)) {
               return true;
             }
