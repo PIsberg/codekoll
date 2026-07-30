@@ -109,11 +109,22 @@ public final class Main implements Callable<Integer> {
       default -> new ConsoleReporter();
     };
     reporter.report(result.findings(), out);
-    for (Map.Entry<Path, String> skip : result.skippedFiles().entrySet()) {
-      out.println("skipped (does not compile): " + skip.getKey() + " — " + skip.getValue());
-    }
-    result.ruleFailures().forEach(f -> out.println("internal rule failure: " + f));
+    reportDiagnostics(result);
     return exitCode(result);
+  }
+
+  /**
+   * Diagnostics go to stderr, never to the reporter's stream. With {@code --output} that stream
+   * carries a machine-readable payload, and trailing prose after the closing bracket makes the
+   * JSON unparseable and the SARIF unusable for GitHub code scanning. Stderr keeps them visible
+   * in a terminal (the "fail toward visible" rule) without corrupting the artifact.
+   */
+  @SuppressWarnings("PMD.SystemPrintln")
+  private void reportDiagnostics(AnalysisResult result) {
+    for (Map.Entry<Path, String> skip : result.skippedFiles().entrySet()) {
+      System.err.println("skipped (does not compile): " + skip.getKey() + " — " + skip.getValue());
+    }
+    result.ruleFailures().forEach(f -> System.err.println("internal rule failure: " + f));
   }
 
   private int explainRule(List<Rule> rules, PrintWriter out) {
