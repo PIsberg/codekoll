@@ -5,6 +5,47 @@ import org.junit.jupiter.api.Test;
 
 class PerformanceRulesTest {
 
+  /**
+   * Found in the wild: vibetags' RoleConfig and async-test-lib's AgentOptions both iterate
+   * {@code x.split(...)}. The header runs once, so the regex is compiled once.
+   */
+  @Test
+  void allowsSplitInTheForEachHeader() {
+    RuleTestHarness.assertFixture(new RegexInLoopRule(), "N10", """
+        class N10 {
+          int m(String args) {
+            int n = 0;
+            for (String token : args.split("[,;]")) {
+              n += token.length();
+            }
+            for (String line : args.split("\\r\\n|\\r|\\n", -1)) {
+              n += line.length();
+            }
+            return n;
+          }
+        }
+        """);
+  }
+
+  /** The same call one level in, inside an outer loop, is once per outer iteration. */
+  @Test
+  void flagsSplitInTheHeaderOfANestedLoop() {
+    RuleTestHarness.assertFixture(new RegexInLoopRule(), "P10", """
+        import java.util.List;
+        class P10 {
+          int m(List<String> rows) {
+            int n = 0;
+            for (String row : rows) {
+              for (String cell : row.split("[,;]")) { // :: CK-REGEX-IN-LOOP
+                n += cell.length();
+              }
+            }
+            return n;
+          }
+        }
+        """);
+  }
+
   @Test
   void regexInLoopFlagged() {
     RuleTestHarness.assertFixture(new RegexInLoopRule(), "P1", """

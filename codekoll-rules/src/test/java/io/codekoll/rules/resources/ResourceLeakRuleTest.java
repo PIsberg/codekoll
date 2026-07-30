@@ -114,6 +114,27 @@ class ResourceLeakRuleTest {
         """);
   }
 
+  /**
+   * Found in the wild: async-test-lib's TelemetryBridge.activate() registers the bridge and
+   * returns it. The caller closes it; the factory is not the owner.
+   */
+  @Test
+  void allowsALocalThatIsReturned() {
+    RuleTestHarness.assertFixture(rule, "N10", """
+        import java.io.FileInputStream;
+        import java.io.IOException;
+        class N10 {
+          FileInputStream open(String path) throws IOException {
+            FileInputStream stream = new FileInputStream(path);
+            register(stream);
+            return stream;
+          }
+          void register(FileInputStream stream) {
+          }
+        }
+        """);
+  }
+
   @Test
   void allowsNoOpCloseables() {
     RuleTestHarness.assertFixture(rule, "N6", """

@@ -88,6 +88,22 @@ public final class RegexInLoopRule extends AbstractRule {
         return super.visitMethodInvocation(node, ctx);
       }
 
+      /**
+       * The sequence expression of a for-each and the initializer of a basic for run exactly
+       * once, before the first iteration. {@code for (String s : line.split(","))} compiles its
+       * regex once, so flagging it is noise; the same call in the loop body still reports.
+       *
+       * <p>Reference comparison is deliberate: AST nodes are compared by identity, since two
+       * structurally equal subtrees are still different places in the file.
+       */
+      @SuppressWarnings("PMD.CompareObjectsWithEquals") // AST node identity, not value equality
+      private boolean isLoopHeaderEvaluatedOnce(Tree loop, Tree child) {
+        if (loop instanceof EnhancedForLoopTree forEach) {
+          return forEach.getExpression() == child;
+        }
+        return loop instanceof ForLoopTree basicFor && basicFor.getInitializer().contains(child);
+      }
+
       private boolean isPatternCompile(MemberSelectTree select, String name, RuleContext ctx) {
         if (!"compile".equals(name)) {
           return false;
@@ -119,11 +135,15 @@ public final class RegexInLoopRule extends AbstractRule {
       }
 
       private boolean insideLoop() {
-        for (TreePath p = getCurrentPath(); p != null; p = p.getParentPath()) {
+        Tree child = getCurrentPath().getLeaf();
+        for (TreePath p = getCurrentPath(); p != null; child = p.getLeaf(), p = p.getParentPath()) {
           Tree leaf = p.getLeaf();
           if (leaf instanceof LambdaExpressionTree
               || leaf instanceof com.sun.source.tree.MethodTree) {
             return false;
+          }
+          if (isLoopHeaderEvaluatedOnce(leaf, child)) {
+            continue;  // once per loop, not once per iteration: keep looking for an outer loop
           }
           if (leaf instanceof ForLoopTree || leaf instanceof EnhancedForLoopTree
               || leaf instanceof WhileLoopTree || leaf instanceof DoWhileLoopTree) {

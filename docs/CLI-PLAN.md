@@ -66,11 +66,21 @@ Triage:
   that will not parse and `--format sarif` would have produced one GitHub code scanning rejects.
   Diagnostics now go to stderr, where a terminal still shows them. This only surfaced because a
   foreign repo had files codekoll could not compile; codekoll's own sources never do.
+- **Two more false positives, both about where an expression actually runs.**
+  CK-REGEX-IN-LOOP flagged `for (String t : args.split("[,;]"))` in async-test-lib's
+  `AgentOptions` and vibetags' `RoleConfig`: the sequence expression of a for-each runs once,
+  before the first iteration, so the regex is compiled once. `insideLoop()` now skips a loop
+  entered through its header (for-each expression, basic-for initializer) and keeps looking for
+  an outer loop, so the same call nested one level in still reports. CK-RESOURCE-LEAK flagged
+  `TelemetryBridge.activate()`, a factory that registers the bridge and returns it: the rule
+  already treated a returned *creation expression* as ownership transfer but not a returned
+  *local*. Both have fixtures pinning the exempt shape and a still-reported control.
 - **Best true positive:** async-test-lib `LazyInitValidator` performs `|=` on four `volatile
-  boolean` fields from a method called concurrently by design. Reported upstream.
+  boolean` fields from a method called concurrently by design. Fixed upstream.
 
-After the fixes: vibetags unchanged at 15 findings, async-test-lib 25 findings, 0 errors, and no
-finding was lost to the exemption (standing agreement 2).
+Net effect of the four fixes, with no finding lost that was worth keeping (standing agreement 2):
+vibetags 15 -> 13, async-test-lib 27 -> 23, errors 2 -> 0. Everything removed was triaged as a
+false positive first and pinned by a fixture before the rule changed.
 
 ---
 
