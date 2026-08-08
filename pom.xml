@@ -27,7 +27,7 @@
     <maven.compiler.release>25</maven.compiler.release>
 
     <junit.version>5.12.2</junit.version>
-    <archunit.version>1.4.1</archunit.version>
+    <archunit.version>1.4.2</archunit.version>
     <jspecify.version>1.0.0</jspecify.version>
     <picocli.version>4.7.7</picocli.version>
 
