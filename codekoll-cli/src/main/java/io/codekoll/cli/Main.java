@@ -12,6 +12,8 @@ import io.codekoll.report.JsonReporter;
 import io.codekoll.report.PathRenderer;
 import io.codekoll.report.Reporter;
 import io.codekoll.report.SarifReporter;
+import io.codekoll.workspace.ConfigException;
+import io.codekoll.workspace.ConfigLoader;
 import io.codekoll.workspace.ResolveMode;
 import io.codekoll.workspace.SourceUnit;
 import io.codekoll.workspace.Workspace;
@@ -59,32 +61,34 @@ public final class Main implements Callable<Integer> {
       description = "Drop discovered files matching this glob (repeatable).")
   private List<String> excludes = List.of();
 
+  // Nullable rather than defaulted: "not given on the command line" has to stay distinguishable
+  // from "given the same value the default happens to have", or a config file could never win.
   @Option(names = "--no-tests", description = "Skip test source sets.")
-  private boolean noTests;
+  private @Nullable Boolean noTests;
 
   @Option(names = "--no-gitignore", description = "Do not honour .gitignore.")
-  private boolean noGitignore;
+  private @Nullable Boolean noGitignore;
 
-  @Option(names = "--classpath", defaultValue = "",
+  @Option(names = "--classpath", paramLabel = "<cp>",
       description = "Classpath appended to every unit's resolved classpath.")
-  private String classpath = "";
+  private @Nullable String classpath;
 
-  @Option(names = "--resolve", paramLabel = "<mode>", defaultValue = "discover",
-      description = "Classpath strategy: discover, none (default: ${DEFAULT-VALUE}). "
+  @Option(names = "--resolve", paramLabel = "<mode>",
+      description = "Classpath strategy: discover, none (default: discover). "
           + "build and auto arrive with the trust gate.")
-  private String resolve = "discover";
+  private @Nullable String resolve;
 
   @Option(names = "--release", paramLabel = "<n>",
       description = "Override the detected language level for all units.")
-  private int release;
+  private @Nullable Integer release;
 
-  @Option(names = "--format", defaultValue = "console",
-      description = "Output format: console, json, sarif (default: ${DEFAULT-VALUE}).")
-  private String format = "console";
+  @Option(names = "--format", paramLabel = "<format>",
+      description = "Output format: console, json, sarif (default: console).")
+  private @Nullable String format;
 
-  @Option(names = "--fail-on", defaultValue = "error",
-      description = "Exit-code threshold: error, warning, never (default: ${DEFAULT-VALUE}).")
-  private String failOn = "error";
+  @Option(names = "--fail-on", paramLabel = "<level>",
+      description = "Exit-code threshold: error, warning, never (default: error).")
+  private @Nullable String failOn;
 
   @Option(names = "--rules", split = ",", paramLabel = "<id>",
       description = "Only run these rule ids.")
@@ -108,11 +112,19 @@ public final class Main implements Callable<Integer> {
 
   @Option(names = "--absolute-paths",
       description = "Report absolute paths instead of repo-relative ones.")
-  private boolean absolutePaths;
+  private @Nullable Boolean absolutePaths;
 
   @Option(names = "--verbose",
       description = "Print the workspace header and every discovery diagnostic.")
   private boolean verbose;
+
+  @Option(names = "--config", paramLabel = "<file>",
+      description = "Read this config file instead of the repository's codekoll.toml.")
+  private @Nullable Path configFile;
+
+  @Option(names = "--print-config",
+      description = "Print the effective configuration and where each value came from, then exit.")
+  private boolean printConfig;
 
   @Option(names = "--output", paramLabel = "<file>",
       description = "Write output to this file instead of stdout.")
@@ -138,29 +150,47 @@ public final class Main implements Callable<Integer> {
   }
 
   private int run(PrintWriter out) {
-    List<Rule> rules = RuleRegistry.loadAll();
+    List<Rule> allRules = RuleRegistry.loadAll();
     if (catalog) {
-      printCatalog(rules, out);
+      printCatalog(allRules, out);
       return 0;
     }
     if (!explain.isEmpty()) {
-      return explainRule(rules, out);
+      return explainRule(allRules, out);
     }
 
-    WorkspaceOptions options;
+    Settings settings;
+    List<String> configDiagnostics = new ArrayList<>();
     try {
-      options = options();
-    } catch (IllegalArgumentException e) {
+      Path repoRoot = WorkspaceDiscovery.repoRootFor(paths, repo);
+      settings = new Settings(
+          ConfigLoader.load(repoRoot, configFile, userConfigDir(), configDiagnostics));
+    } catch (ConfigException e) {
       out.println(e.getMessage());
       return 2;
     }
-    Workspace workspace = new WorkspaceDiscovery(options).discover(paths);
+
+    if (printConfig) {
+      printConfig(settings, out);
+      return 0;
+    }
+
+    Workspace workspace;
+    List<Rule> rules;
+    Map<String, Severity> severityOverrides;
+    try {
+      workspace = new WorkspaceDiscovery(options(settings)).discover(paths);
+      rules = settings.select(allRules, ruleIds, packs);
+      severityOverrides = settings.severityOverrides(allRules);
+    } catch (ConfigException | IllegalArgumentException e) {
+      out.println(e.getMessage());
+      return 2;
+    }
+
     if (printWorkspace) {
       printWorkspace(workspace, out);
       return 0;
     }
-
-    rules = RuleRegistry.filterByPacks(RuleRegistry.filterByIds(rules, ruleIds), packs);
     if (rules.isEmpty()) {
       out.println("No rules selected.");
       return 2;
@@ -173,15 +203,70 @@ public final class Main implements Callable<Integer> {
       return 0;
     }
 
-    AnalysisResult result = analyze(workspace, rules);
-    reporter(workspace).report(result.findings(), out);
+    AnalysisResult result = applyOverrides(analyze(workspace, rules), severityOverrides);
+    reporter(workspace, settings).report(result.findings(), out);
     reportDiagnostics(workspace, result);
-    return exitCode(result);
+    configDiagnostics.forEach(this::warn);
+    settings.notes().forEach(this::warn);
+    return exitCode(result, settings);
   }
 
-  private WorkspaceOptions options() {
-    return new WorkspaceOptions(repo, includes, excludes, !noTests, !noGitignore, release,
-        resolveMode(), classpath, WorkspaceOptions.DEFAULT_MAX_FILE_BYTES);
+  /**
+   * Re-stamps findings whose rule has a {@code [severity]} override.
+   *
+   * <p>Applied before reporting <em>and</em> before {@link #exitCode}: an override that changed
+   * only the printed word, while the exit code still followed the rule's default, would be a
+   * setting that looks obeyed and is not.
+   */
+  private static AnalysisResult applyOverrides(AnalysisResult result,
+      Map<String, Severity> overrides) {
+    if (overrides.isEmpty()) {
+      return result;
+    }
+    List<Finding> restamped = result.findings().stream()
+        .map(f -> {
+          Severity override = overrides.get(f.rule().value());
+          return override == null || override == f.severity() ? f
+              : new Finding(f.rule(), override, f.file(), f.line(), f.column(), f.message(),
+                  f.snippet());
+        })
+        .toList();
+    return new AnalysisResult(restamped, result.skippedFiles(), result.ruleFailures());
+  }
+
+  /**
+   * The user's config directory, or {@code null} when there is none to read.
+   *
+   * <p>{@code XDG_CONFIG_HOME} first so that a caller can point codekoll somewhere reproducible;
+   * this is the only configuration codekoll reads from outside the repository, and it is also the
+   * only place allowed to enable build execution (CLI-SPEC §4.3).
+   */
+  private static @Nullable Path userConfigDir() {
+    String xdg = System.getenv("XDG_CONFIG_HOME");
+    if (xdg != null && !xdg.isBlank()) {
+      return Path.of(xdg);
+    }
+    String home = System.getProperty("user.home");
+    return home == null || home.isBlank() ? null : Path.of(home, ".config");
+  }
+
+  private WorkspaceOptions options(Settings settings) {
+    return new WorkspaceOptions(repo,
+        settings.union("sources.include", includes),
+        settings.union("sources.exclude", concat(excludes, settings.list("suppress.paths",
+            List.of()))),
+        settings.flag("sources.tests", noTests == null ? null : !noTests, true),
+        settings.flag("sources.gitignore", noGitignore == null ? null : !noGitignore, true),
+        settings.integer("compile.release", release, 0),
+        resolveMode(settings),
+        settings.string("compile.classpath", classpath, ""),
+        WorkspaceOptions.DEFAULT_MAX_FILE_BYTES);
+  }
+
+  private static List<String> concat(List<String> first, List<String> second) {
+    List<String> all = new ArrayList<>(first);
+    all.addAll(second);
+    return all;
   }
 
   /**
@@ -190,27 +275,50 @@ public final class Main implements Callable<Integer> {
    * Accepting them silently as {@code discover} would be the quiet failure that gate exists to
    * prevent.
    */
-  private ResolveMode resolveMode() {
-    ResolveMode mode = ResolveMode.parse(resolve);
+  private ResolveMode resolveMode(Settings settings) {
+    String requested = settings.string("resolve.mode", resolve, "discover");
+    ResolveMode mode = ResolveMode.parse(requested);
     if (mode == ResolveMode.BUILD || mode == ResolveMode.AUTO) {
       throw new IllegalArgumentException(
-          "--resolve " + resolve + " is not implemented yet; use discover or none, or pass "
+          "resolve mode '" + requested + "' is not implemented yet; use discover or none, or pass "
               + "--classpath explicitly");
     }
     return mode;
   }
 
-  private PathRenderer pathRenderer(Workspace workspace) {
-    return absolutePaths ? PathRenderer.absolute() : workspace::relativize;
+  private PathRenderer pathRenderer(Workspace workspace, Settings settings) {
+    return settings.flag("report.absolute-paths", absolutePaths, false)
+        ? PathRenderer.absolute()
+        : workspace::relativize;
   }
 
-  private Reporter reporter(Workspace workspace) {
-    PathRenderer renderer = pathRenderer(workspace);
-    return switch (format) {
+  private Reporter reporter(Workspace workspace, Settings settings) {
+    PathRenderer renderer = pathRenderer(workspace, settings);
+    return switch (settings.string("report.format", format, "console")) {
       case "json" -> new JsonReporter(renderer);
       case "sarif" -> new SarifReporter(renderer);
       default -> new ConsoleReporter(renderer);
     };
+  }
+
+  /** Effective settings that {@code --print-config} exists to make visible. */
+  private void printConfig(Settings settings, PrintWriter out) {
+    if (settings.values().isEmpty()) {
+      out.println("No configuration file in effect; every setting is a built-in default or a "
+          + "command-line flag.");
+      return;
+    }
+    out.println("key                              value                          from");
+    settings.values().forEach((key, value) ->
+        out.printf("%-32s %-30s %s%n", key, render(value.value()), value.origin()));
+    out.flush();
+  }
+
+  private static String render(Object value) {
+    return value instanceof List<?> list
+        ? list.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", ",
+            "[", "]"))
+        : String.valueOf(value);
   }
 
   /**
@@ -376,13 +484,21 @@ public final class Main implements Callable<Integer> {
     }
   }
 
-  private int exitCode(AnalysisResult result) {
-    return switch (failOn) {
+  private int exitCode(AnalysisResult result, Settings settings) {
+    return switch (settings.string("report.fail-on", failOn, "error")) {
       case "never" -> 0;
       case "warning" -> result.findings().stream()
           .anyMatch(f -> f.severity() != Severity.INFO) ? 1 : 0;
       default -> result.hasErrors() ? 1 : 0;
     };
+  }
+
+  /** Stderr, so that {@code --output} keeps carrying nothing but the report. */
+  @SuppressWarnings("PMD.SystemPrintln")
+  private void warn(String message) {
+    if (verbose || !message.contains("no codekoll.toml")) {
+      System.err.println(message);
+    }
   }
 
   public static void main(String[] args) {

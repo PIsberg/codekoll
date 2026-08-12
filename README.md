@@ -81,7 +81,7 @@ java -jar codekoll.jar --packs security,concurrency --fail-on warning src/main/j
 java -jar codekoll.jar --explain CK-WEEK-YEAR-FORMAT
 ```
 
-Exit codes: `0` clean, `1` findings at/above the `--fail-on` threshold, `2` usage/internal error. Configure per-project via `codekoll.toml` (disable rules or packs, adjust severities, exclude generated sources); suppress single findings with `@SuppressWarnings("codekoll:CK-…")`. Full CLI and config reference in [SPEC.md](SPEC.md) §3.4–3.5.
+Exit codes: `0` clean, `1` findings at/above the `--fail-on` threshold, `2` usage/internal error. Configure per-project via `codekoll.toml` at the repo root — disable rules or packs, adjust severities, exclude paths — and run `codekoll --print-config` to see every effective value and the file and line it came from; suppress single findings with `@SuppressWarnings("codekoll:CK-…")`. Full CLI and config reference in [docs/CLI-SPEC.md](docs/CLI-SPEC.md).
 
 **The 30-second demo:** run codekoll on its own examples module and watch all 110 rules fire —
 

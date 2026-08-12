@@ -139,6 +139,25 @@ public final class WorkspaceDiscovery {
     return roots.stream().map(p -> p.toAbsolutePath().normalize()).distinct().toList();
   }
 
+  /**
+   * Detects the repo root without discovering anything else.
+   *
+   * <p>Configuration lookup needs the root before discovery can run, because the repository's own
+   * {@code codekoll.toml} is one of the things that decides what discovery does. Detection is a
+   * handful of file-existence checks, so doing it twice costs nothing, and the diagnostics of the
+   * real run are the ones reported.
+   *
+   * @param paths files or directories named on the command line; empty means the working directory
+   * @param explicit {@code --repo}, or {@code null} to detect
+   * @return the repo root, absolute and normalized
+   */
+  public static Path repoRootFor(List<Path> paths, @Nullable Path explicit) {
+    if (explicit != null) {
+      return explicit.toAbsolutePath().normalize();
+    }
+    WorkspaceDiscovery discovery = new WorkspaceDiscovery(WorkspaceOptions.defaults());
+    return discovery.detectRepoRoot(discovery.normalize(paths));
+  }
   /** CLI-SPEC §3.1: explicit root, then {@code .git}, then a build file, then the common prefix. */
   private Path detectRepoRoot(List<Path> scanRoots) {
     Path start = commonPrefix(scanRoots);

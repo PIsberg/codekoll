@@ -21,7 +21,7 @@ Authoritative documents — read before non-trivial changes, keep in sync with y
 | `codekoll-engine` | `io.codekoll.engine` | `JavacTask` driver, combined-traversal dispatcher, suppression, ServiceLoader registry | api, `jdk.compiler` |
 | `codekoll-rules` | `io.codekoll.rules` | All rule packs, one package per pack; `AbstractRule` helpers; exports nothing | api, engine helpers |
 | `codekoll-report` | `io.codekoll.report` | console/JSON/SARIF reporters | api only — **never** `jdk.compiler` |
-| `codekoll-workspace` | `io.codekoll.workspace` | target-repo discovery: repo root, build system, source units, per-unit language level, hermetic classpath discovery | `java.xml` only — **never** api, engine or `jdk.compiler` |
+| `codekoll-workspace` | `io.codekoll.workspace` | target-repo discovery (repo root, build system, source units, per-unit language level, hermetic classpath) **and** configuration: hand-rolled `codekoll.toml` reader, merging, provenance, §14 untrusted-repo limits | `java.xml` only — **never** api, engine or `jdk.compiler` |
 | `codekoll-cli` | `io.codekoll.cli` | picocli front-end, `codekoll.toml` config, wiring; fat-jar entry | everything above |
 | `codekoll-examples` | *(none, intentionally)* | one documented buggy/fixed example class per rule + E2E verification tests | the built analyzer (test scope) |
 | `codekoll-load-test` | *(none, intentionally)* | perf harness: corpora, CPU/heap measurement, `baseline.json` regression gate, per-version chart images (`docs/perf/`) | the built analyzer (forked JVM) |
@@ -47,6 +47,7 @@ java -jar codekoll-cli/target/codekoll.jar codekoll-examples/src/main/java   # t
 java -jar codekoll-cli/target/codekoll.jar --explain CK-THREAD-RUN           # rule docs from metadata
 java -jar codekoll-cli/target/codekoll.jar .                                 # discover the repo, then analyze it
 java -jar codekoll-cli/target/codekoll.jar --print-workspace .               # what discovery decided, before trusting it
+java -jar codekoll-cli/target/codekoll.jar --print-config .                  # every effective setting + the file:line it came from
 mvn -pl codekoll-load-test verify -Pquick    # perf quick profile vs baseline.json (also in CI per build)
 mvn -pl codekoll-load-test verify -Pfull     # full perf suite + chart regeneration (nightly/release)
 ```
