@@ -53,8 +53,18 @@ class WorkspaceCliTest {
     return normalize(actual, repo);
   }
 
+  /**
+   * The snapshot is a checked-in text file, so git hands it back with CRLF on Windows and LF on
+   * the CI runner. Both sides are folded to {@code \n} before comparison; without that the tests
+   * pass on whichever platform generated them and fail on the other.
+   */
   private static String expected(String fixture) throws IOException {
-    return Files.readString(REPOS.resolve(fixture).resolve("expected-workspace.json")).strip();
+    return unifyLineEndings(
+        Files.readString(REPOS.resolve(fixture).resolve("expected-workspace.json")));
+  }
+
+  private static String unifyLineEndings(String text) {
+    return text.lines().collect(java.util.stream.Collectors.joining("\n")).strip();
   }
 
   /**
