@@ -72,7 +72,7 @@ public final class LoadTestRunner {
     writeCharts(root.resolve("docs").resolve("perf"), measurements);
 
     int gate = checkRegression(moduleDir.resolve("baseline.json"), measurements,
-        maxCpuRegression, maxHeapRegression);
+        maxCpuRegression, maxHeapRegression, full);
     if (gate != 0) {
       System.exit(gate);
     }
@@ -123,7 +123,7 @@ public final class LoadTestRunner {
    *     compare has not passed
    */
   private static int checkRegression(Path baselineFile, List<Measurement> measurements,
-      double maxCpu, double maxHeap) throws IOException {
+      double maxCpu, double maxHeap, boolean full) throws IOException {
     Measurement current = measurements.get(measurements.size() - 1);
     String env = current.env();
 
@@ -164,14 +164,17 @@ public final class LoadTestRunner {
     long baseHeap = extractLong(entry, "peakHeapBytes");
     double cpuDelta = (current.cpuMillis() - baseCpu) / (double) baseCpu;
     double heapDelta = (current.peakHeapBytes() - baseHeap) / (double) baseHeap;
+    double cpuBudget = cpuBudget(full, maxCpu);
     System.out.printf(Locale.ROOT,
-        "vs baseline (%s, %s): CPU %+.1f%% (%d ms now, %d baseline), heap %+.1f%%%n",
-        env, current.tier(), cpuDelta * 100, current.cpuMillis(), baseCpu, heapDelta * 100);
+        "vs baseline (%s, %s): CPU %+.1f%% (%d ms now, %d baseline, budget +%.0f%%), "
+            + "heap %+.1f%%%n",
+        env, current.tier(), cpuDelta * 100, current.cpuMillis(), baseCpu, cpuBudget * 100,
+        heapDelta * 100);
 
     boolean fail = false;
-    if (cpuDelta > maxCpu) {
+    if (cpuDelta > cpuBudget) {
       System.err.printf(Locale.ROOT, "REGRESSION: CPU +%.1f%% exceeds +%.0f%% budget%n",
-          cpuDelta * 100, maxCpu * 100);
+          cpuDelta * 100, cpuBudget * 100);
       fail = true;
     }
     if (heapDelta > maxHeap) {
@@ -180,6 +183,31 @@ public final class LoadTestRunner {
       fail = true;
     }
     return fail ? 1 : 0;
+  }
+
+  /**
+   * The CPU budget: the configured one for the {@code full} profile, a gross-regression budget
+   * for {@code quick}.
+   *
+   * <p>CPU time on a machine that is doing anything else is not measurable to ±15 %. Two CI runs
+   * of an identical code path produced 6 430 ms and 3 010 ms for the 100k corpus, a factor of
+   * 2.1, GitHub having handed out different hardware. The development machine gave 10 453 ms
+   * idle and 17 031 ms with a build running alongside, a factor of 1.6. Both numbers are the
+   * host, not the analyzer.
+   *
+   * <p>So {@code quick}, which runs on every push wherever a runner is free, checks for a
+   * doubling rather than a creep. That is a weaker gate, and saying so is the honest alternative
+   * to one that fails Markdown-only pull requests until everybody learns to ignore it. Two things
+   * keep it worth running: heap keeps the tight budget, because it measured 103 MB across both CI
+   * runs to within 0.6 % and depends on the work rather than on the host; and the findings count
+   * is recorded, so two versions doing different amounts of work is visible.
+   *
+   * <p>The tight CPU budget belongs where the machine is quiet and known. That is the nightly
+   * {@code full} profile, which keeps {@code maxCpuRegression} as configured — on a dedicated
+   * runner it means something, and CLI-PLAN Milestone 16 is where that runner gets set up.
+   */
+  private static double cpuBudget(boolean full, double configured) {
+    return full ? configured : Math.max(configured, 1.0);
   }
 
   /** The baseline object for this environment and tier, or {@code null} if there is none. */
