@@ -34,6 +34,10 @@ public final class WorkspaceDiscovery {
   private static final Pattern SOURCE_ROOT =
       Pattern.compile(".*/src/([^/]+)/java$");
 
+  /** {@code .../src/<sourceSet>/resources}: data, not code, whatever it contains. */
+  private static final Pattern RESOURCE_ROOT =
+      Pattern.compile(".*/src/[^/]+/resources$");
+
   /** Source-set names whose contents are tests. */
   private static final Set<String> TEST_SOURCE_SETS =
       Set.of("test", "tests", "integrationtest", "integrationtests", "inttest",
@@ -78,7 +82,16 @@ public final class WorkspaceDiscovery {
         : GitIgnoreMatcher.none();
     FileSelector selector = new FileSelector(repoRoot, options, gitignore, diagnostics);
 
-    List<Path> explicitFiles = scanRoots.stream().filter(Files::isRegularFile).toList();
+    // A named file that is not Java source reaches javac as a compilation unit and throws
+    // IllegalArgumentException there. `codekoll pom.xml` is a plausible typo, and a shell that
+    // expands a glob into the positional list produces the same thing without anyone typing it.
+    List<Path> named = scanRoots.stream().filter(Files::isRegularFile).toList();
+    List<Path> explicitFiles = named.stream().filter(WorkspaceDiscovery::isJavaSource).toList();
+    for (Path other : named) {
+      if (!isJavaSource(other)) {
+        diagnostics.add("not Java source, ignored: " + other);
+      }
+    }
     List<Path> dirs = scanRoots.stream().filter(Files::isDirectory).toList();
     for (Path missing : scanRoots) {
       if (!Files.exists(missing)) {
@@ -188,6 +201,9 @@ public final class WorkspaceDiscovery {
           if (name != null && FileSelector.isExcludedDirName(name.toString())) {
             return FileVisitResult.SKIP_SUBTREE;
           }
+          if (isResourceDir(candidate)) {
+            return FileVisitResult.SKIP_SUBTREE;
+          }
           if (attrs.isSymbolicLink()) {
             return FileVisitResult.SKIP_SUBTREE;
           }
@@ -216,13 +232,37 @@ public final class WorkspaceDiscovery {
       diagnostics.add("ignoring source root with no module directory above it: " + sourceRoot);
       return;
     }
-    byModule.computeIfAbsent(moduleDir, k -> new ArrayList<>())
-        .add(new SourceRoot(sourceRoot, tests));
+    List<SourceRoot> roots = byModule.computeIfAbsent(moduleDir, k -> new ArrayList<>());
+    // Overlapping command-line paths (`codekoll . src/main/java`) reach the same root twice;
+    // recording it twice analyzes every file in it twice and reports every finding twice.
+    if (roots.stream().noneMatch(existing -> existing.path().equals(sourceRoot))) {
+      roots.add(new SourceRoot(sourceRoot, tests));
+    }
+  }
+
+  /** Java source, and not the {@code module-info.java} the engine never analyzes. */
+  private static boolean isJavaSource(Path file) {
+    Path name = file.getFileName();
+    return name != null
+        && name.toString().endsWith(".java")
+        && !"module-info.java".equals(name.toString());
   }
 
   private static boolean isSourceRoot(Path dir) {
     return SOURCE_ROOT.matcher(dir.toString().replace('\\', '/')).matches()
         && moduleDirOf(dir) != null;
+  }
+
+  /**
+   * True for a {@code src/<set>/resources} directory.
+   *
+   * <p>Resources are data, never compiled, and a project that ships sample repositories as test
+   * data — codekoll itself does — has complete {@code src/main/java} layouts sitting under one.
+   * Walking into them turns fixtures into modules and their sample bugs into findings against the
+   * project that merely stores them.
+   */
+  private static boolean isResourceDir(Path dir) {
+    return RESOURCE_ROOT.matcher(dir.toString().replace('\\', '/')).matches();
   }
 
   /**

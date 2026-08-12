@@ -1,5 +1,6 @@
 package io.codekoll.report;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.codekoll.api.Finding;
@@ -54,5 +55,54 @@ class ReportersTest {
     assertTrue(out.contains("\"level\": \"error\""), "sarif level mapping");
     assertTrue(out.contains("\"startLine\": 42"), "region");
     assertTrue(out.contains("src/Foo.java"), "artifact uri");
+  }
+
+  // ------------------------------------------------- path rendering (CLI-SPEC §7.1)
+
+  private static final Path REPO_ROOT = Path.of(System.getProperty("user.dir")).resolve("repo");
+
+  private static final Path ABSOLUTE_FILE = REPO_ROOT.resolve("src/main/java/Foo.java");
+
+  private static final Finding ABSOLUTE_FINDING = new Finding(
+      new RuleId("CK-REF-EQUALITY"), Severity.ERROR, ABSOLUTE_FILE,
+      42, 16, "== compares references, not contents.", "if (a == b) {");
+
+  /** Stands in for the workspace's relativizer without dragging that module in. */
+  private static PathRenderer under(Path root) {
+    return file -> root.relativize(file).toString().replace('\\', '/');
+  }
+
+  @Test
+  void consoleRendersThroughTheGivenRenderer() {
+    String out = render(new ConsoleReporter(under(REPO_ROOT)), List.of(ABSOLUTE_FINDING));
+
+    assertTrue(out.contains("src/main/java/Foo.java"), "repo-relative path");
+    assertFalse(out.contains(REPO_ROOT.toString()), "no absolute prefix");
+  }
+
+  @Test
+  void jsonRendersThroughTheGivenRenderer() {
+    String out = render(new JsonReporter(under(REPO_ROOT)), List.of(ABSOLUTE_FINDING));
+
+    assertTrue(out.contains("\"file\":\"src/main/java/Foo.java\""), "repo-relative path");
+  }
+
+  /**
+   * SARIF URIs decide whether GitHub can annotate a pull request: an absolute path from a build
+   * agent annotates nothing, and a Windows separator is not a URI.
+   */
+  @Test
+  void sarifUriIsRelativeAndForwardSlashed() {
+    String out = render(new SarifReporter(under(REPO_ROOT)), List.of(ABSOLUTE_FINDING));
+
+    assertTrue(out.contains("\"uri\": \"src/main/java/Foo.java\""), "repo-relative uri");
+    assertFalse(out.contains("\\\\"), "no escaped backslashes in the uri");
+  }
+
+  @Test
+  void defaultRendererStillPrintsAbsolutePaths() {
+    String out = render(new ConsoleReporter(), List.of(ABSOLUTE_FINDING));
+
+    assertTrue(out.contains(ABSOLUTE_FILE.toString()), "--absolute-paths behaviour");
   }
 }

@@ -1,0 +1,7 @@
+{
+  "buildSystem": "PLAIN",
+  "units": [
+    {"name": ".", "buildSystem": "PLAIN", "release": <jdk>, "releaseDetected": false, "files": 1, "sourceRoots": ["."]}
+  ],
+  "diagnostics": ["no language level declared for module '.' (plain source tree); assuming --release <jdk>"]
+}

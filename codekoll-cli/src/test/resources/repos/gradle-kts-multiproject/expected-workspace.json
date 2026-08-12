@@ -1,0 +1,8 @@
+{
+  "buildSystem": "GRADLE",
+  "units": [
+    {"name": "app", "buildSystem": "CONVENTIONAL", "release": 17, "releaseDetected": true, "files": 1, "sourceRoots": ["app/src/main/java"]},
+    {"name": "lib", "buildSystem": "CONVENTIONAL", "release": 17, "releaseDetected": true, "files": 1, "sourceRoots": ["lib/src/main/java"]}
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,7 @@
+{
+  "buildSystem": "CONVENTIONAL",
+  "units": [
+    {"name": ".", "buildSystem": "CONVENTIONAL", "release": <jdk>, "releaseDetected": false, "files": 1, "sourceRoots": ["src/main/java"]}
+  ],
+  "diagnostics": ["no language level declared for module '.' (conventional layout); assuming --release <jdk>"]
+}
