@@ -86,6 +86,7 @@ class WorkspaceDiscoveryTest {
   /** Minimal builder so each test states only the option it cares about. */
   private static final class Opts {
     private Path repoRoot;
+    private List<String> includes = List.of();
     private List<String> excludes = List.of();
     private boolean includeTests = true;
     private boolean useGitignore = true;
@@ -94,6 +95,11 @@ class WorkspaceDiscoveryTest {
 
     Opts repoRoot(Path value) {
       this.repoRoot = value;
+      return this;
+    }
+
+    Opts includes(String... globs) {
+      this.includes = List.of(globs);
       return this;
     }
 
@@ -123,7 +129,7 @@ class WorkspaceDiscoveryTest {
     }
 
     WorkspaceOptions build() {
-      return new WorkspaceOptions(repoRoot, List.of(), excludes, includeTests, useGitignore,
+      return new WorkspaceOptions(repoRoot, includes, excludes, includeTests, useGitignore,
           releaseOverride, ResolveMode.DISCOVER, "", maxFileBytes);
     }
   }
@@ -357,6 +363,24 @@ class WorkspaceDiscoveryTest {
     assertEquals(List.of("Widget.java"), fileNames(unit(discover(), ".")));
   }
 
+  /**
+   * Sample projects stored as test data are not modules of the project storing them — codekoll's
+   * own fixture repositories are exactly this shape, and without the rule they turn into sixteen
+   * units and their deliberate sample code into findings.
+   */
+  @Test
+  void sourceLayoutsInsideTestResourcesAreNotModules() throws IOException {
+    write("pom.xml", POM_RELEASE_21);
+    javaFile("src/main/java/Widget.java", "Widget");
+    write("src/test/resources/repos/sample/pom.xml", POM_RELEASE_21);
+    javaFile("src/test/resources/repos/sample/src/main/java/Sample.java", "Sample");
+
+    Workspace workspace = discover();
+
+    assertEquals(List.of("."), names(workspace));
+    assertEquals(List.of("Widget.java"), fileNames(unit(workspace, ".")));
+  }
+
   @Test
   void oversizedFilesAreSkippedWithADiagnostic() throws IOException {
     write("pom.xml", POM_RELEASE_21);
@@ -391,6 +415,29 @@ class WorkspaceDiscoveryTest {
     SourceUnit root = unit(discover(new Opts().excludes("**/legacy/**")), ".");
 
     assertEquals(List.of("Widget.java"), fileNames(root));
+  }
+
+  @Test
+  void includeGlobNarrowsTheDiscoveredSet() throws IOException {
+    write("pom.xml", POM_RELEASE_21);
+    javaFile("src/main/java/Widget.java", "Widget");
+    javaFile("src/main/java/legacy/Old.java", "Old");
+
+    SourceUnit root = unit(discover(new Opts().includes("**/legacy/**")), ".");
+
+    assertEquals(List.of("Old.java"), fileNames(root));
+  }
+
+  @Test
+  void excludeBeatsIncludeWhenBothMatch() throws IOException {
+    write("pom.xml", POM_RELEASE_21);
+    javaFile("src/main/java/legacy/Old.java", "Old");
+    javaFile("src/main/java/legacy/Keep.java", "Keep");
+
+    SourceUnit root = unit(
+        discover(new Opts().includes("**/legacy/**").excludes("**/Old.java")), ".");
+
+    assertEquals(List.of("Keep.java"), fileNames(root));
   }
 
   @Test
@@ -466,6 +513,39 @@ class WorkspaceDiscoveryTest {
 
     assertTrue(String.join("\n", workspace.diagnostics()).contains("does not exist"),
         "a path the user named but that is absent must be reported");
+  }
+
+  /**
+   * Found by running codekoll on codekoll through discovery: a shell that expands a glob into the
+   * positional list hands over {@code pom.xml}, javac rejects it with
+   * {@code IllegalArgumentException: Compilation unit is not of SOURCE kind}, and the run dies
+   * with a stack trace instead of a message.
+   */
+  @Test
+  void aNamedFileThatIsNotJavaSourceIsReportedNotCompiled() throws IOException {
+    write("pom.xml", POM_RELEASE_21);
+    javaFile("src/main/java/Widget.java", "Widget");
+
+    Workspace workspace = new WorkspaceDiscovery(new Opts().repoRoot(repo).build())
+        .discover(List.of(repo.resolve("pom.xml")));
+
+    assertTrue(workspace.units().stream().flatMap(u -> u.files().stream()).findAny().isEmpty(),
+        "a pom is not a compilation unit: " + workspace.units());
+    assertTrue(diagnostics(workspace).contains("not Java source, ignored"),
+        diagnostics(workspace));
+  }
+
+  /** The same expansion also names a directory twice; analyzing it twice doubles every finding. */
+  @Test
+  void overlappingPathsAnalyzeEachFileOnce() throws IOException {
+    write("pom.xml", POM_RELEASE_21);
+    javaFile("src/main/java/Widget.java", "Widget");
+
+    Workspace workspace = new WorkspaceDiscovery(new Opts().repoRoot(repo).build())
+        .discover(List.of(repo, repo.resolve("src"), repo.resolve("src/main/java")));
+
+    assertEquals(1, workspace.fileCount(), "one file, named through three overlapping paths");
+    assertEquals(1, unit(workspace, ".").sourceRoots().size());
   }
 
   @Test

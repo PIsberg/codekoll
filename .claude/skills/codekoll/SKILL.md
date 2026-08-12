@@ -45,9 +45,13 @@ mvn -pl codekoll-examples verify  # example verification suite (all rules fire, 
 java -jar codekoll-cli/target/codekoll.jar --help
 java -jar codekoll-cli/target/codekoll.jar codekoll-examples/src/main/java   # the 30-second demo
 java -jar codekoll-cli/target/codekoll.jar --explain CK-THREAD-RUN           # rule docs from metadata
+java -jar codekoll-cli/target/codekoll.jar .                                 # discover the repo, then analyze it
+java -jar codekoll-cli/target/codekoll.jar --print-workspace .               # what discovery decided, before trusting it
 mvn -pl codekoll-load-test verify -Pquick    # perf quick profile vs baseline.json (also in CI per build)
 mvn -pl codekoll-load-test verify -Pfull     # full perf suite + chart regeneration (nightly/release)
 ```
+
+Dogfooding note: the `selfcheck` gate passes `--resolve none` on purpose. Discovery's `--classpath` replaces javac's fat-jar fallback, which is where `jspecify` comes from when codekoll analyzes itself; without it 55 of codekoll's own files stop type-checking and the gate quietly weakens. See the comment in `codekoll-cli/pom.xml`.
 
 Perf note: `baseline.json` in `codekoll-load-test` is a gate like any other — never refresh it as a side effect; a deliberate baseline update goes in its own PR with the reason stated.
 

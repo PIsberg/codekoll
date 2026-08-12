@@ -57,6 +57,7 @@ final class FileSelector {
   private final GitIgnoreMatcher gitignore;
   private final List<String> diagnostics;
   private final List<PathMatcher> excludeMatchers;
+  private final List<PathMatcher> includeMatchers;
 
   FileSelector(Path repoRoot, WorkspaceOptions options, GitIgnoreMatcher gitignore,
       List<String> diagnostics) {
@@ -64,10 +65,16 @@ final class FileSelector {
     this.options = options;
     this.gitignore = gitignore;
     this.diagnostics = diagnostics;
-    this.excludeMatchers = new ArrayList<>();
-    for (String glob : options.excludes()) {
-      excludeMatchers.add(FileSystems.getDefault().getPathMatcher("glob:" + glob));
+    this.excludeMatchers = matchers(options.excludes());
+    this.includeMatchers = matchers(options.includes());
+  }
+
+  private static List<PathMatcher> matchers(List<String> globs) {
+    List<PathMatcher> compiled = new ArrayList<>(globs.size());
+    for (String glob : globs) {
+      compiled.add(FileSystems.getDefault().getPathMatcher("glob:" + glob));
     }
+    return compiled;
   }
 
   /** Returns the sorted, de-duplicated {@code .java} files under {@code root}. */
@@ -95,6 +102,24 @@ final class FileSelector {
   private boolean excludedByGlob(Path file) {
     Path relative = Path.of(rel(file));
     for (PathMatcher matcher : excludeMatchers) {
+      if (matcher.matches(relative) || matcher.matches(file)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * CLI-SPEC §3.3: {@code --include} refines the discovered set rather than replacing discovery.
+   * With no include globs every discovered file qualifies; with any, a file must match one of
+   * them. {@code --exclude} is applied afterwards and wins, so the pair reads left to right.
+   */
+  private boolean includedByGlob(Path file) {
+    if (includeMatchers.isEmpty()) {
+      return true;
+    }
+    Path relative = Path.of(rel(file));
+    for (PathMatcher matcher : includeMatchers) {
       if (matcher.matches(relative) || matcher.matches(file)) {
         return true;
       }
@@ -169,7 +194,7 @@ final class FileSelector {
       if (options.useGitignore() && gitignore.isIgnored(rel(file), false)) {
         return FileVisitResult.CONTINUE;
       }
-      if (excludedByGlob(file) || looksGenerated(file)) {
+      if (!includedByGlob(file) || excludedByGlob(file) || looksGenerated(file)) {
         return FileVisitResult.CONTINUE;
       }
       found.add(file.toAbsolutePath().normalize());

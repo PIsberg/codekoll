@@ -25,7 +25,7 @@ jobs:
           java-version: '25'
           cache: maven
       - name: Compile + unit/fixture tests
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli test
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-workspace,codekoll-cli test
       - name: Package fat jar
         run: mvn -B -pl codekoll-cli -am package -DskipTests
       - name: Smoke-test the jar
@@ -47,11 +47,11 @@ jobs:
           java-version: '25'
           cache: maven
       - name: Checkstyle
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli checkstyle:check
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-workspace,codekoll-cli checkstyle:check
       - name: PMD
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli -DskipTests package pmd:check
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-workspace,codekoll-cli -DskipTests package pmd:check
       - name: SpotBugs + find-sec-bugs
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli -DskipTests package spotbugs:check
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-workspace,codekoll-cli -DskipTests package spotbugs:check
 
   coverage:
     name: coverage
@@ -69,7 +69,7 @@ jobs:
           java-version: '25'
           cache: maven
       - name: JaCoCo report + threshold check
-        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-cli verify
+        run: mvn -B -pl codekoll-api,codekoll-engine,codekoll-rules,codekoll-report,codekoll-workspace,codekoll-cli verify
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jacoco-reports

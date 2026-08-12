@@ -100,6 +100,41 @@ short config lists, four private records built only from immutable lists, an
 `ObjectInputStream` read of a file the same process wrote, and one float comparison against an
 exact sentinel.
 
+### 2026-08-12 — codekoll on codekoll, through the new discovery path
+
+The first repository the CLI surface met was this one. `codekoll --print-workspace .` reports
+8 units and 333 files: the eight modules, no `target/`, no generated sources. Three defects, all
+found by running it rather than by reading it:
+
+- **A named file that is not Java source killed the run.** `codekoll pom.xml` reaches javac as a
+  compilation unit and throws `IllegalArgumentException: Compilation unit is not of SOURCE kind`
+  — a stack trace, not a message. Nobody types that on purpose, but on Windows the `java`
+  launcher expands a wildcard argument that matches files, so `--exclude "codekoll-examples/**"`
+  arrives as one exclude glob plus a dozen positional paths, `pom.xml` among them. Non-source
+  files are now dropped with a diagnostic naming each one.
+- **Overlapping paths analyzed everything twice.** The same expansion also named
+  `codekoll-examples/src` while `.` was already there; the source root was recorded twice and
+  every file in it counted twice (220 files for 110 sources). Source roots are de-duplicated per
+  module now.
+- **Sample repositories under `src/test/resources` became modules.** The seven fixture repos
+  added in this milestone are complete `src/main/java` layouts, so discovery found them: 16 units
+  instead of 8. A `src/<set>/resources` directory is data whatever it contains, and is no longer
+  walked for source roots.
+
+**The dogfooding gate went quiet and was put back** (standing agreement 2). Discovery hands javac
+a `--classpath` assembled from build output on disk, which replaces the fat-jar fallback the
+selfcheck relied on for `jspecify`. Measured on codekoll's own production sources:
+
+| selfcheck run | skipped files | findings |
+| --- | --- | --- |
+| before this milestone's CLI surface | 0 | 0 error, 4 warning, 2 info |
+| with `--resolve discover` | **55** | 0 error, **0 warning**, 2 info |
+| with `--resolve none` (what ships) | 0 | 0 error, 4 warning, 2 info |
+
+Four real warnings vanished and the gate still exited 0 — precisely the failure the agreement
+exists to catch. The selfcheck passes `--resolve none`, and the pom records why. The general fix
+is `--resolve build` in Milestone 13.
+
 ---
 
 ## Milestone 11 — Workspace model, source discovery, honest paths (3–4 days)
@@ -107,10 +142,10 @@ exact sentinel.
 The foundation, but immediately user-visible: after this milestone `codekoll .` in a foreign repo
 root does the right thing instead of walking `target/`.
 
-**Status: the discovery library is done and tested; the CLI surface that exposes it is not.**
-Everything under "Library" below is implemented, 110 tests, line 92.7 % / branch 85.4 % coverage.
-Nothing under "User-visible surface" is started, so from a user's point of view this milestone has
-not yet landed — `codekoll` still walks the paths it is given and prints absolute paths.
+**Status: complete.** The discovery library landed first (and then sat on a branch that never
+reached `main` — see PLAN.md's status section for how that happened); the CLI surface that exposes
+it landed with this change. `codekoll` now discovers a workspace on every run, analyzes each unit
+at its own language level and with its own classpath, and reports repo-relative paths.
 
 Library:
 
@@ -127,10 +162,11 @@ Library:
 - [x] `SourceUnit` record (roots, classpath, release, module name) and `Workspace` (repo root,
       build system, ordered units, discovery diagnostics).
 - [x] File selection (§3.3): default exclusions, `.gitignore` honouring (own matcher, no git
-      subprocess), generated-file detection, symlink-cycle safety, 2 MiB cap, `--exclude` globs.
-      **Not done:** `--include` — `WorkspaceOptions.includes()` exists but nothing reads it.
+      subprocess), generated-file detection, symlink-cycle safety, 2 MiB cap, `--exclude` globs,
+      and `--include` — which narrows the discovered set rather than replacing discovery, with
+      `--exclude` applied afterwards and winning.
 - [x] Release-level detection per unit (§3.4), every fallback covered, every guess and every clamp
-      recorded in `diagnostics()`. Surfacing it in `--verbose` waits on the CLI work.
+      recorded in `diagnostics()`, printed by `--print-workspace` and `--verbose`.
 - [x] Hermetic `discover`-mode classpath resolution (§4.1), brought forward from Milestone 13
       because per-unit classpaths were cheap once `SourceUnit` existed.
 - [x] **ArchUnit additions**: `io.codekoll.workspace..` may not depend on `jdk.compiler`,
@@ -139,27 +175,41 @@ Library:
       §4.3 gate). Placed in the workspace module so they travel with the code they constrain.
 - [x] **ARCHITECTURE.md**: module map updated to eight modules; `SKILL.md` module map likewise.
 
-User-visible surface (remaining Milestone 11 work):
+User-visible surface:
 
-- [ ] **Repo-relative paths everywhere** (§7.1): `Finding.file()` stays absolute internally, the
-      reporters relativize against the repo root. `--absolute-paths` restores the old behaviour.
-      Update the existing reporter snapshot tests — this is a deliberate output change.
-      `Workspace.relativize()` already exists and is tested; nothing calls it yet.
-- [ ] `--repo`, `--print-workspace`, `--no-tests`, `--no-gitignore`, `--include`, `--exclude`,
-      `--absolute-paths` on the CLI; positional path defaults to `.`. The CLI does not reference
-      `codekoll-workspace` at all yet, so this is also where the two modules first get wired.
-- [ ] Fixture repositories (§13) for `maven-single`, `maven-multimodule`, `gradle-groovy`,
-      `gradle-kts-multiproject`, `plain-sources`, `no-build-file`, `broken-pom`, each with an
-      asserted `--print-workspace` snapshot. **Partly covered differently:** the same layouts are
-      already asserted as programmatic fixtures in `WorkspaceDiscoveryTest`; what is missing is the
-      committed-repo form and the snapshot of CLI output, both of which need `--print-workspace`.
-- [ ] Translate `SourceUnit` → `AnalysisUnit` in the CLI (the engine-side records exist already).
+- [x] **Repo-relative paths everywhere** (§7.1): `Finding.file()` stays absolute internally; the
+      reporters render through a `PathRenderer` the CLI supplies, so `codekoll-report` still has
+      no dependency on discovery. `--absolute-paths` restores the old behaviour. Reporter tests
+      cover console, JSON and SARIF, the last because a build-agent absolute path in a SARIF
+      `uri` annotates nothing on GitHub.
+- [x] `--repo`, `--print-workspace`, `--no-tests`, `--no-gitignore`, `--include`, `--exclude`,
+      `--absolute-paths` on the CLI; positional path defaults to the working directory.
+      Also `--verbose` (workspace header plus every diagnostic) and `--resolve discover|none`,
+      which Milestone 13 extends to `build`/`auto` — those two values parse today and are
+      **refused**, because accepting them and quietly resolving something else is precisely what
+      the §4.3 trust gate exists to prevent.
+- [x] Fixture repositories (§13) for `maven-single`, `maven-multimodule`, `gradle-groovy`,
+      `gradle-kts-multiproject`, `plain-sources`, `no-build-file`, `broken-pom`, each committed
+      under `codekoll-cli/src/test/resources/repos/` with an `expected-workspace.json` asserted
+      against `--print-workspace --format json`. Two values are normalized before comparison —
+      the absolute repo root and the running JDK's feature version — so one snapshot serves the
+      Windows development machine and the Linux CI runner. `mixed-release` and `missing-deps`
+      belong to Milestones 13–14 and are not here yet.
+- [ ] Translate `SourceUnit` → `AnalysisUnit` in the CLI. **Not done, deliberately:** the CLI
+      runs one `CompilationDriver` per unit and merges the results, which is what makes per-unit
+      release and classpath real today. `AnalysisUnit`/`Attribution` stay unused until Milestone
+      14 adds `analyzeUnits`, batching and the attribution counters they exist for.
 
 **Exit criterion:** `codekoll --print-workspace` on all seven fixture repos and on the three
 standing corpus repos produces a correct unit list; `codekoll .` from the codekoll repo root
 discovers exactly the production source roots (no `target/`, no generated sources) and reports
-repo-relative paths; the dogfooding gate runs through this path. **Not met yet** — blocked only on
-the CLI items above.
+repo-relative paths; the dogfooding gate runs through this path. **Met, with one qualification:**
+the seven fixture repos are asserted in CI; `codekoll .` here reports the eight modules and 333
+files, no `target/`, no fixtures, no generated sources. The gate now goes through discovery on
+every run, but still names the production source directories rather than `.`, because `.` also
+finds `codekoll-examples`, whose 110 deliberate bugs would turn it red. Re-running the three
+standing corpus repos waits on `--resolve build` (Milestone 13); without it, attribution on a
+foreign repo is worse than the hand-assembled classpath used for the July run.
 
 ## Milestone 12 — Configuration, rule filtering, `--rule-path` (2–3 days)
 

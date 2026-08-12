@@ -7,6 +7,20 @@ import java.util.List;
 /** Stable flat-JSON output for custom tooling (SARIF is the CI-oriented format). */
 public final class JsonReporter implements Reporter {
 
+  private final PathRenderer paths;
+
+  /** Reports absolute paths. */
+  public JsonReporter() {
+    this(PathRenderer.absolute());
+  }
+
+  /**
+   * @param paths how file paths are rendered; repo-relative in a normal CLI run
+   */
+  public JsonReporter(PathRenderer paths) {
+    this.paths = paths;
+  }
+
   @Override
   public void report(List<Finding> findings, PrintWriter out) {
     out.println("[");
@@ -14,7 +28,7 @@ public final class JsonReporter implements Reporter {
       Finding f = findings.get(i);
       out.printf("  {\"rule\":\"%s\",\"severity\":\"%s\",\"file\":\"%s\",\"line\":%d,"
               + "\"column\":%d,\"message\":\"%s\",\"snippet\":\"%s\"}%s%n",
-          f.rule(), f.severity(), escape(f.file().toString()), f.line(), f.column(),
+          f.rule(), f.severity(), escape(paths.render(f.file())), f.line(), f.column(),
           escape(f.message()), escape(f.snippet()), i < findings.size() - 1 ? "," : "");
     }
     out.println("]");

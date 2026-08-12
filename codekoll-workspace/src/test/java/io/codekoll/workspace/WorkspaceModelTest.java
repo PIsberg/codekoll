@@ -62,6 +62,14 @@ class WorkspaceModelTest {
   }
 
   @Test
+  void relativizeRendersTheRootItselfAsDot() {
+    Workspace workspace = workspace(dir, List.of());
+
+    // An empty string here reaches --print-workspace as a source root with no name.
+    assertEquals(".", workspace.relativize(dir));
+  }
+
+  @Test
   void workspaceCollectionsAreDefensivelyCopied() {
     List<SourceUnit> units = new ArrayList<>();
     List<String> diagnostics = new ArrayList<>();

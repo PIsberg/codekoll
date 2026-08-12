@@ -9,7 +9,9 @@ import org.jspecify.annotations.Nullable;
  * flags at all does the right thing in a repository root.
  *
  * @param repoRoot explicit repo root, or {@code null} to detect one
- * @param includes extra source globs; when non-empty these replace layout-based discovery
+ * @param includes source globs that narrow the discovered set; empty means every discovered file
+ *     qualifies. Discovery still decides which roots exist — an include glob cannot add a file
+ *     outside them, and {@code excludes} is applied afterwards and wins (CLI-SPEC §3.3)
  * @param excludes source globs to drop, applied after the built-in exclusions
  * @param includeTests whether test source roots are analyzed
  * @param useGitignore whether {@code .gitignore} entries are honoured

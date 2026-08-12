@@ -1,0 +1,8 @@
+{
+  "buildSystem": "MAVEN",
+  "units": [
+    {"name": "core", "buildSystem": "MAVEN", "release": 17, "releaseDetected": true, "files": 1, "sourceRoots": ["core/src/main/java"]},
+    {"name": "web", "buildSystem": "MAVEN", "release": 21, "releaseDetected": true, "files": 1, "sourceRoots": ["web/src/main/java"]}
+  ],
+  "diagnostics": []
+}

@@ -37,13 +37,20 @@ public record Workspace(
     return units.stream().mapToInt(u -> u.files().size()).sum();
   }
 
-  /** Relativizes a path against the repo root, using {@code /} on every platform. */
+  /**
+   * Relativizes a path against the repo root, using {@code /} on every platform.
+   *
+   * <p>The repo root itself renders as {@code "."} rather than the empty string: an empty path in
+   * a report reads as missing data, and {@code .} is what the unit naming already uses for the
+   * root module. A path outside the root keeps its absolute form — silently rendering it as a
+   * relative path would point at a file that is not there.
+   */
   public String relativize(Path file) {
     Path target = file.toAbsolutePath().normalize();
     Path root = repoRoot.toAbsolutePath().normalize();
     String text = target.startsWith(root)
         ? root.relativize(target).toString()
         : target.toString();
-    return text.replace('\\', '/');
+    return text.isEmpty() ? "." : text.replace('\\', '/');
   }
 }

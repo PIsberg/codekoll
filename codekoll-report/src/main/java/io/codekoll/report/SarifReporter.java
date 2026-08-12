@@ -18,6 +18,21 @@ public final class SarifReporter implements Reporter {
       "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/"
           + "sarif-schema-2.1.0.json";
 
+  private final PathRenderer paths;
+
+  /** Reports absolute paths. */
+  public SarifReporter() {
+    this(PathRenderer.absolute());
+  }
+
+  /**
+   * @param paths how file paths are rendered; repo-relative in a normal CLI run, which is what
+   *     GitHub code scanning needs to annotate a pull request
+   */
+  public SarifReporter(PathRenderer paths) {
+    this.paths = paths;
+  }
+
   @Override
   public void report(List<Finding> findings, PrintWriter out) {
     Map<String, Finding> ruleExemplar = new LinkedHashMap<>();
@@ -72,8 +87,9 @@ public final class SarifReporter implements Reporter {
     };
   }
 
-  private static String uri(Finding f) {
-    return f.file().toString().replace('\\', '/');
+  /** SARIF URIs are always {@code /}-separated, whatever the OS the run happened on. */
+  private String uri(Finding f) {
+    return paths.render(f.file()).replace('\\', '/');
   }
 
   private static String escape(String s) {

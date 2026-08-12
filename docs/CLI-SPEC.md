@@ -239,7 +239,16 @@ is wrong for a multi-module repo (different classpaths) and unbounded in memory.
 
 All reported paths become **relative to the repo root**, using `/` separators on every platform.
 Absolute paths appear only under `--absolute-paths`. This is a behaviour change for existing
-output and is covered by updated snapshot tests.
+output and is covered by updated snapshot tests. The repo root itself renders as `.`, never as an
+empty string.
+
+Implemented as a `PathRenderer` the CLI hands to the reporter: findings keep absolute paths
+internally, and `codekoll-report` gains no dependency on the workspace model.
+
+**Diagnostics are the exception.** A path inside a diagnostic — "could not parse
+`<abs>/pom.xml`", "not Java source, ignored: `<abs>/build.gradle`" — stays absolute. These name a
+file on disk that codekoll failed to use, often one outside the repo root, and an unambiguous
+path is worth more there than a consistent one. Snapshot tests normalize it.
 
 ### 7.2 Console
 
@@ -362,7 +371,7 @@ codekoll [OPTIONS] [<path>...]        # default path: the current directory
 
 Target
   --repo <dir>              repo root for path relativization and config lookup
-  --include <glob>          add sources (repeatable)
+  --include <glob>          keep only discovered sources matching this (repeatable)
   --exclude <glob>          drop sources (repeatable)
   --no-tests                skip test source sets
   --no-gitignore            do not honour .gitignore
@@ -372,6 +381,7 @@ Compilation
   --classpath <cp>          appended to every unit's resolved classpath
   --module-classpath <u>=<cp>   per-unit classpath (repeatable)
   --resolve <mode>          discover|build|auto|none            (default discover)
+                            build and auto are refused until the §4.3 trust gate exists
   --allow-build-execution   permit invoking the target's build tool (see --resolve build)
   --resolve-online          allow the build tool to hit the network (implies not --offline)
   --resolve-timeout <dur>   default 120s
@@ -405,9 +415,18 @@ Adoption
 Diagnostics
   --print-config            effective config with per-value provenance, then exit
   --print-workspace         detected repo root, build system, units, classpaths, then exit
+                            human-readable by default; --format json emits the machine-readable
+                            form the fixture-repository snapshots assert against
   --no-cache / --refresh-cache
   --version / --help
 ```
+
+**Wildcards on Windows.** The `java` launcher expands a command-line argument containing `*` when
+it matches files on disk, so `--exclude "codekoll-examples/**"` can arrive as one glob plus a
+handful of positional paths — quoting in the shell does not prevent it. Codekoll copes (non-source
+files are reported and dropped, overlapping paths are de-duplicated) but the exclusion silently
+does less than the user asked. A pattern that matches nothing literally (`**/examples/**`), the
+launcher scripts of §12, or `codekoll.toml` all avoid it.
 
 Exit codes:
 

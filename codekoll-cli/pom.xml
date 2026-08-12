@@ -35,6 +35,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.codekoll</groupId>
+      <artifactId>codekoll-workspace</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli</artifactId>
     </dependency>
@@ -51,7 +56,13 @@
         <!-- Standing dogfooding gate (PLAN): the freshly shaded jar analyzes codekoll's own
              production sources on every verify, failing the build on any ERROR finding.
              No - -classpath needed: javac's fallback classpath is the fat jar itself, which
-             bundles jspecify + picocli (see ARCHITECTURE.md). -->
+             bundles jspecify + picocli (see ARCHITECTURE.md).
+             - -resolve none preserves exactly that. Milestone 11 made every run discover a
+             workspace, and discovery hands javac a - -classpath assembled from build output on
+             disk, which replaces the fat-jar fallback and leaves jspecify unresolvable: 55 of
+             codekoll's own files stopped type-checking, so type-aware rules stopped running on
+             them. A gate that goes quiet is worse than no gate (CLI-PLAN standing agreement 2).
+             The path resolution needs is - -resolve build, which lands in Milestone 13. -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.5.0</version>
@@ -67,6 +78,8 @@
                 <argument>${project.build.directory}/codekoll.jar</argument>
                 <argument>--fail-on</argument>
                 <argument>error</argument>
+                <argument>--resolve</argument>
+                <argument>none</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-api/src/main/java</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-engine/src/main/java</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-rules/src/main/java</argument>

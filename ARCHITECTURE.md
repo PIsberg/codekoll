@@ -45,6 +45,27 @@ A useful consequence: the fat jar bundles the analyzer's few dependencies, so wh
 analyzes *itself* with no `--classpath`, javac's default classpath (the fat jar) already
 contains jspecify and picocli — the selfcheck needs no dependency wrangling.
 
+That fallback is fragile in one specific way, and the dogfooding gate depends on it. Since M11
+every run discovers a workspace, and `--resolve discover` assembles a `--classpath` from build
+output found on disk. Passing *any* classpath replaces the default, so jspecify stops resolving
+and 55 of codekoll's own files stop attributing. The `selfcheck` execution therefore passes
+`--resolve none`; the general fix is `--resolve build` (CLI-PLAN Milestone 13).
+
+## How the CLI wires the three worlds together
+
+`codekoll-cli` is the only module that knows about workspace, engine and report at once:
+
+1. `WorkspaceDiscovery.discover(paths)` returns a `Workspace`: repo root, build system, ordered
+   `SourceUnit`s (files + release + classpath), and a diagnostic for every guess it made.
+2. One `CompilationDriver` per unit, each with that unit's `--release` and classpath; the
+   results are merged and sorted once, so output ordering does not depend on how discovery
+   split the repository. (`AnalysisUnit` and `Attribution` in the engine are the shape M14's
+   `analyzeUnits` will take — batching, timeouts and attribution counters belong there.)
+3. Reporters receive a `PathRenderer`. Findings keep absolute paths internally; the CLI hands
+   the reporter `Workspace::relativize`, or the identity renderer under `--absolute-paths`, so
+   `codekoll-report` prints repo-relative paths while still depending on nothing but the api.
+   SARIF needs this specifically: absolute build-agent paths annotate nothing on GitHub.
+
 ## Compilation pipeline
 
 `CompilationDriver` drives the *system* compiler (`ToolProvider.getSystemJavaCompiler()`):

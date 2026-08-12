@@ -8,10 +8,24 @@ import java.util.List;
 /** Human-oriented console output: location, severity, rule id, snippet, message. */
 public final class ConsoleReporter implements Reporter {
 
+  private final PathRenderer paths;
+
+  /** Reports absolute paths. */
+  public ConsoleReporter() {
+    this(PathRenderer.absolute());
+  }
+
+  /**
+   * @param paths how file paths are rendered; repo-relative in a normal CLI run
+   */
+  public ConsoleReporter(PathRenderer paths) {
+    this.paths = paths;
+  }
+
   @Override
   public void report(List<Finding> findings, PrintWriter out) {
     for (Finding f : findings) {
-      out.printf("%s:%d:%d  %-7s %s%n", f.file(), f.line(), f.column(),
+      out.printf("%s:%d:%d  %-7s %s%n", paths.render(f.file()), f.line(), f.column(),
           f.severity(), f.rule());
       if (!f.snippet().isEmpty()) {
         out.printf("    %s%n", f.snippet());
