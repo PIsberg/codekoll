@@ -264,6 +264,26 @@ A pitch-first README.md already exists at the repo root (prior-art positioning +
 
 **Exit criterion:** all seven CI jobs green on `main`; README badges render and reflect them; SARIF from `selfcheck` visible in the repo's code-scanning tab; v0.1.0 tagged with the fat jar attached and its perf data point charted in `docs/perf/`. — **partially met:** the seven jobs exist and `v0.1.0` is tagged; the badges do not reflect anything, and the nightly profile and the four Reporting & UX gaps above are open.
 
+## Milestones 11–16 — Running codekoll against another repository
+
+Milestones 0–10 above deliver the analyzer and its rule catalog. Making that jar usable against
+*someone else's* repository — workspace discovery, dependency-classpath resolution, honest
+reporting when type-checking degrades, baselines for legacy code, and an install story — is
+planned separately in **[docs/CLI-PLAN.md](docs/CLI-PLAN.md)**, specified in
+**[docs/CLI-SPEC.md](docs/CLI-SPEC.md)**.
+
+| # | Milestone | Estimate |
+|---|---|---|
+| 11 | Workspace model, source discovery, repo-relative paths | 3–4 d |
+| 12 | Configuration layering, `--rule-path`, untrusted-config enforcement | 2–3 d |
+| 13 | Classpath resolution (`discover` / `build`) + trust gate | 4–5 d |
+| 14 | Per-unit analysis, batching, attribution honesty | 3–4 d |
+| 15 | Baseline + changed-files mode | 2–3 d |
+| 16 | Distribution, GitHub Action, docs | 3–4 d |
+
+The standing quality bar, the dogfooding gate and the working agreements of this document apply
+unchanged to all of them.
+
 ---
 
 ## Total estimate

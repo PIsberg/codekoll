@@ -71,6 +71,7 @@
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-engine/src/main/java</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-rules/src/main/java</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-report/src/main/java</argument>
+                <argument>${maven.multiModuleProjectDirectory}/codekoll-workspace/src/main/java</argument>
                 <argument>${maven.multiModuleProjectDirectory}/codekoll-cli/src/main/java</argument>
               </arguments>
             </configuration>
