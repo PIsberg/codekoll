@@ -135,6 +135,12 @@ public interface Rule {
 
 `codekoll.toml` at project root (all optional):
 
+> **Not implemented as of 2026-08-12.** Nothing in `codekoll-cli` reads a config file; the flags
+> and keys below are the design, not the current behaviour. Config loading, provenance and the
+> untrusted-repo-config rules are Milestone 12 of [docs/CLI-PLAN.md](docs/CLI-PLAN.md), which
+> supersedes this section's schema. Inline suppression (`@SuppressWarnings("codekoll:…")` and
+> `// codekoll:off`) *is* implemented.
+
 ```toml
 [rules]
 disable = ["CK-CRYPTO-WEAK"]      # individual rules
@@ -161,12 +167,17 @@ codekoll [OPTIONS] <path>...
   --fail-on error|warning|never   exit-code threshold (default error)
   --rules <ids>           comma list; only run these rules
   --packs <names>         comma list; only run these packs
-  --rule-path <jars>      extra module path entries scanned for third-party rule packs
+  --rule-path <jars>      extra module path entries scanned for third-party rule packs  [NOT IMPLEMENTED]
   --explain <id>          print a rule's explanation, fix, and example, then exit
-  --config <file>         explicit config path
+  --config <file>         explicit config path                                          [NOT IMPLEMENTED]
 ```
 
 Exit codes: `0` clean / below threshold, `1` findings at/above threshold, `2` usage or internal error.
+
+The CLI also ships `--catalog` (writes the generated rule catalog, the source of `docs/RULES.md`),
+which this section predates. The two flags marked above are specified but absent from
+`codekoll-cli`; both are Milestone 12 of [docs/CLI-PLAN.md](docs/CLI-PLAN.md), whose CLI-SPEC is
+the authority for every flag added by that workstream.
 
 ---
 
@@ -187,6 +198,13 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
 | **Total** | | **114** |
+
+**Implementation status (2026-08-12): 110 of these 114 are implemented on `main`.** The table above
+is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
+reports `correctness` 26 and `concurrency` 12. The four specified-but-unbuilt rules are
+`CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
+`CK-PARALLEL-MUTATION` (`concurrency`); none has an implementation, fixtures or an example class.
+See the status section at the top of [PLAN.md](PLAN.md).
 
 ---
 
