@@ -39,7 +39,10 @@ public final class LoadTestRunner {
 
     // Measured before the analyzer so the machine's speed is captured on the same host, in the
     // same JVM, under whatever contention this run happens to face.
+    String env = Environment.key();
     long calibration = Calibration.cpuMillis();
+    System.out.println("environment: " + env + " (baselines are per-environment; performance "
+        + "numbers do not travel between machines)");
     System.out.println("calibration: " + calibration + " ms for the fixed workload");
 
     Benchmark benchmark = new Benchmark();
@@ -51,7 +54,7 @@ public final class LoadTestRunner {
     if (Files.isDirectory(examples)) {
       int lines = countLines(examples);
       measurements.add(benchmark.measure("small",
-          collect(examples), lines, iterations, calibration));
+          collect(examples), lines, iterations, calibration, env));
     }
 
     // Generated tiers.
@@ -60,7 +63,7 @@ public final class LoadTestRunner {
       Path dir = work.resolve("gen" + targetLines);
       List<Path> corpus = CorpusGenerator.generate(dir, targetLines);
       measurements.add(benchmark.measure(targetLines / 1000 + "k",
-          corpus, targetLines, iterations, calibration));
+          corpus, targetLines, iterations, calibration, env));
     }
 
     print(measurements);
@@ -113,47 +116,58 @@ public final class LoadTestRunner {
     System.out.println("Charts written to " + dir);
   }
 
-  /** Compares the largest generated tier against baseline; returns 1 on regression. */
+  /**
+   * Compares the largest generated tier against the baseline entry for this environment.
+   *
+   * @return 1 when the run regressed, or when no comparable baseline exists — a gate that cannot
+   *     compare has not passed
+   */
   private static int checkRegression(Path baselineFile, List<Measurement> measurements,
       double maxCpu, double maxHeap) throws IOException {
-    boolean recording = Boolean.getBoolean("codekoll.loadtest.record");
-    if (recording) {
+    Measurement current = measurements.get(measurements.size() - 1);
+    String env = current.env();
+
+    if (Boolean.getBoolean("codekoll.loadtest.record")) {
       // Deliberate, opt-in, and never a side effect of an ordinary run: a baseline that rewrites
-      // itself is a gate that agrees with whatever it just measured.
-      System.out.println("Recording this run as the baseline (codekoll.loadtest.record=true).");
-      writeResults(baselineFile, measurements);
+      // itself is a gate that agrees with whatever it just measured. Other environments' entries
+      // are kept — recording on a laptop must not delete CI's numbers.
+      String existing = Files.exists(baselineFile)
+          ? Files.readString(baselineFile, StandardCharsets.UTF_8) : "";
+      List<String> kept = objectsExcludingEnv(existing, env);
+      List<String> merged = new ArrayList<>(kept);
+      measurements.forEach(m -> merged.add(m.toJson()));
+      Files.writeString(baselineFile,
+          "[\n  " + String.join(",\n  ", merged) + "\n]\n");
+      System.out.println("Recorded the '" + env + "' baseline (" + kept.size()
+          + " entries from other environments kept).");
       return 0;
     }
+
     if (!Files.exists(baselineFile)) {
       System.err.println("REGRESSION GATE NOT RUN: no baseline.json. Record one deliberately"
           + " with -Dcodekoll.loadtest.record=true and commit it with the reason.");
       return 1;
     }
+
     String baseline = Files.readString(baselineFile, StandardCharsets.UTF_8);
-    Measurement current = measurements.get(measurements.size() - 1);
-    long baseCpu = extractLong(baseline, current.tier(), "cpuMillis");
-    long baseHeap = extractLong(baseline, current.tier(), "peakHeapBytes");
-    long baseCalibration = extractLong(baseline, current.tier(), "calibrationMillis");
-    if (baseCpu <= 0) {
+    String entry = objectFor(baseline, env, current.tier());
+    if (entry == null) {
       System.err.println("REGRESSION GATE NOT RUN: baseline has no '" + current.tier()
-          + "' tier. Record one deliberately; a gate that cannot compare is not a gate that"
-          + " passed.");
-      return 1;
-    }
-    if (baseCalibration <= 0) {
-      System.err.println("REGRESSION GATE NOT RUN: baseline predates calibration and its raw"
-          + " milliseconds are not comparable across machines. Re-record it deliberately.");
+          + "' entry for environment '" + env + "'. Performance numbers do not travel between"
+          + " machines, so this run has nothing it can honestly be compared against. Record one"
+          + " on this machine with -Dcodekoll.loadtest.record=true, and commit it in its own"
+          + " change with the reason.");
       return 1;
     }
 
-    // Ratios, not milliseconds: see Calibration. The same unchanged code measured +13.7 %,
-    // +15.8 % and +35.8 % against a raw-millisecond baseline on three CI runners.
-    double baseCost = baseCpu / (double) baseCalibration;
-    double cpuDelta = (current.calibratedCost() - baseCost) / baseCost;
+    long baseCpu = extractLong(entry, "cpuMillis");
+    long baseHeap = extractLong(entry, "peakHeapBytes");
+    double cpuDelta = (current.cpuMillis() - baseCpu) / (double) baseCpu;
     double heapDelta = (current.peakHeapBytes() - baseHeap) / (double) baseHeap;
     System.out.printf(Locale.ROOT,
-        "vs baseline (%s): CPU %+.1f%% (calibrated: %.2f now, %.2f baseline), heap %+.1f%%%n",
-        current.tier(), cpuDelta * 100, current.calibratedCost(), baseCost, heapDelta * 100);
+        "vs baseline (%s, %s): CPU %+.1f%% (%d ms now, %d baseline), heap %+.1f%%%n",
+        env, current.tier(), cpuDelta * 100, current.cpuMillis(), baseCpu, heapDelta * 100);
+
     boolean fail = false;
     if (cpuDelta > maxCpu) {
       System.err.printf(Locale.ROOT, "REGRESSION: CPU +%.1f%% exceeds +%.0f%% budget%n",
@@ -168,13 +182,44 @@ public final class LoadTestRunner {
     return fail ? 1 : 0;
   }
 
-  /** Minimal JSON scrape for one field of the object whose tier matches. */
-  private static long extractLong(String json, String tier, String field) {
-    int tierIdx = json.indexOf("\"tier\":\"" + tier + "\"");
-    if (tierIdx < 0) {
-      return -1;
+  /** The baseline object for this environment and tier, or {@code null} if there is none. */
+  private static String objectFor(String json, String env, String tier) {
+    for (String object : objects(json)) {
+      if (object.contains("\"env\":\"" + env + "\"") && object.contains("\"tier\":\"" + tier + "\"")) {
+        return object;
+      }
     }
-    int fieldIdx = json.indexOf("\"" + field + "\":", tierIdx);
+    return null;
+  }
+
+  private static List<String> objectsExcludingEnv(String json, String env) {
+    List<String> kept = new ArrayList<>();
+    for (String object : objects(json)) {
+      if (!object.contains("\"env\":\"" + env + "\"")) {
+        kept.add(object);
+      }
+    }
+    return kept;
+  }
+
+  /** Splits the top-level array into its objects; the file is written by {@link Measurement}. */
+  private static List<String> objects(String json) {
+    List<String> objects = new ArrayList<>();
+    int open = json.indexOf('{');
+    while (open >= 0) {
+      int close = json.indexOf('}', open);
+      if (close < 0) {
+        break;
+      }
+      objects.add(json.substring(open, close + 1));
+      open = json.indexOf('{', close + 1);
+    }
+    return objects;
+  }
+
+  /** Minimal JSON scrape for one numeric field of a single object. */
+  private static long extractLong(String json, String field) {
+    int fieldIdx = json.indexOf("\"" + field + "\":");
     if (fieldIdx < 0) {
       return -1;
     }

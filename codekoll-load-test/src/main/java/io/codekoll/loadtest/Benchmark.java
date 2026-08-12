@@ -27,7 +27,7 @@ final class Benchmark {
   private final List<Rule> rules = RuleRegistry.loadAll();
 
   Measurement measure(String tier, List<Path> corpus, int sourceLines, int iterations,
-      long calibrationMillis) {
+      long calibrationMillis, String env) {
     for (int i = 0; i < WARMUP; i++) {
       driver.analyzePaths(corpus, rules);
     }
@@ -47,7 +47,7 @@ final class Benchmark {
       peakHeap = Math.max(peakHeap, usedHeapAfterGc());
     }
     return new Measurement(tier, sourceLines, findings,
-        fastest(wall), fastest(cpu), peakHeap, calibrationMillis);
+        fastest(wall), fastest(cpu), peakHeap, calibrationMillis, env);
   }
 
   private static long processCpuNanos() {

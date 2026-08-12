@@ -3,21 +3,25 @@ package io.codekoll.loadtest;
 import java.lang.management.ManagementFactory;
 
 /**
- * Measures how fast the machine running the benchmark is, independently of codekoll.
+ * Measures how fast the machine running the benchmark is, independently of codekoll. Recorded
+ * alongside every measurement as context; <em>not</em> used to normalize the gate.
  *
- * <p>The regression gate used to compare raw milliseconds against a baseline recorded on whatever
- * machine happened to record it. That measures the runner as much as the analyzer: on GitHub's
- * shared runners the same unchanged code came in at +13.7 %, +15.8 % and +35.8 % against a
- * baseline from a developer machine, so which side of a 15 % budget a pull request landed on was
- * decided by who else was on the host.
+ * <p>It was, briefly, and CI disproved it. The idea was to divide codekoll's CPU time by this
+ * fixed workload's, so that a slower machine would inflate both and cancel out. Measured:
  *
- * <p>So the gate compares a <em>ratio</em>: codekoll's CPU time divided by the CPU time of this
- * fixed workload on the same host, in the same JVM, moments earlier. A slower machine inflates
- * both and the ratio holds; a genuine regression inflates only the numerator and the ratio moves.
+ * <pre>
+ *   developer machine   calibration 109-125 ms   100k corpus 10 515 ms   ratio 96.5
+ *   GitHub CI runner    calibration 150 ms       100k corpus  6 430 ms   ratio 42.9
+ * </pre>
  *
- * <p>The workload is deliberately arithmetic — an integer mix with a data dependency between
- * iterations so nothing can be optimized away, no allocation, no I/O. It must not exercise
- * codekoll, or a real slowdown would scale the divisor too and hide itself.
+ * <p>The two move in opposite directions. This loop is pure integer arithmetic in registers;
+ * codekoll's work is allocation-, cache- and JIT-heavy. A machine can be worse at one and better
+ * at the other, and these two were. A divisor that is anti-correlated with the numerator is worse
+ * than no divisor, so the gate compares against a baseline recorded on the same kind of machine
+ * instead (see {@link Environment}).
+ *
+ * <p>The number stays because it is useful context in {@code results/latest.json} when a run looks
+ * odd: it separates "this machine is slow today" from "codekoll got slower".
  */
 final class Calibration {
 

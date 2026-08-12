@@ -1,4 +1,6 @@
 [
-  {"tier":"small","sourceLines":3653,"findings":109,"wallMillis":804,"cpuMillis":1468,"peakHeapBytes":54691648,"calibrationMillis":109},
-  {"tier":"100k","sourceLines":100000,"findings":0,"wallMillis":9950,"cpuMillis":10515,"peakHeapBytes":46868776,"calibrationMillis":109}
+  {"env":"ci-linux","tier":"small","sourceLines":3653,"findings":109,"cpuMillis":1360,"peakHeapBytes":113246208,"calibrationMillis":150},
+  {"env":"ci-linux","tier":"100k","sourceLines":100000,"findings":0,"cpuMillis":6430,"peakHeapBytes":108003328,"calibrationMillis":150},
+  {"env":"dev-windows","tier":"small","sourceLines":3653,"findings":109,"wallMillis":476,"cpuMillis":812,"peakHeapBytes":62927400,"calibrationMillis":156},
+  {"env":"dev-windows","tier":"100k","sourceLines":100000,"findings":0,"wallMillis":9830,"cpuMillis":10718,"peakHeapBytes":63429184,"calibrationMillis":156}
 ]
