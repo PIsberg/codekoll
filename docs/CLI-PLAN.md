@@ -135,6 +135,15 @@ Four real warnings vanished and the gate still exited 0 — precisely the failur
 exists to catch. The selfcheck passes `--resolve none`, and the pom records why. The general fix
 is `--resolve build` in Milestone 13.
 
+### 2026-08-12 — the config layer, on codekoll itself
+
+The selfcheck went from `0 error, 4 warning, 2 info` to `0 error, 4 warning, 5 info` when the
+configuration code landed: three new `CK-CONTAINS-IN-LOOP` findings, all in `Settings.select()`,
+where three list scans sat inside a loop over the whole rule registry. Small n, correct rule,
+fixed by building the sets before the loop. Codekoll catching an accidentally-quadratic shape in
+the code that decides which of codekoll's rules to run is the dogfooding gate doing precisely what
+it is for.
+
 ---
 
 ## Milestone 11 — Workspace model, source discovery, honest paths (3–4 days)
@@ -216,30 +225,44 @@ foreign repo is worse than the hand-assembled classpath used for the July run.
 Closes the two commitments SPEC.md already makes but the code does not keep (§3.4 config file,
 §3.5 `--rule-path`), now with the layering a foreign repo needs.
 
-- [ ] TOML reader. **Decision required and recorded in ARCHITECTURE.md**: a small hand-rolled
-      reader for the strict subset the schema uses (keeps the "picocli is the only runtime
-      dependency" property) versus adding a TOML library. Recommendation: hand-rolled subset
-      parser in `codekoll-workspace`, ~200 lines, with a hostile-input fixture suite — the schema
-      is small and closed, and a second runtime dependency is a real cost for a tool distributed
-      as a single jar.
-- [ ] Config resolution order and merging (CLI-SPEC §10), with **per-value provenance** tracked
-      from the start (it is far harder to add later) and surfaced by `--print-config`.
-- [ ] Full schema: `[rules]` (incl. `enable-only`), `[severity]`, `[suppress]`, `[sources]`,
-      `[compile]`, `[resolve]`, `[report]`. Unknown keys and unknown rule ids are **errors**.
-- [ ] Severity overrides applied to `Finding.severity()` before reporting and before exit-code
-      computation.
-- [ ] **Untrusted-repo-config enforcement** (§14): a `codekoll.toml` inside the target repo may not
-      set `resolve.mode = "build"`, may not set `rule-path`, and may not redirect output outside
-      the repo root. Each violation is a named error, each has a test.
+**Status: the configuration half ships; `--rule-path` does not.** That one loads third-party code
+into codekoll's JVM and lands as its own change, so it can be reviewed on its own terms.
+
+- [x] TOML reader. **Decision, recorded in ARCHITECTURE.md:** hand-rolled reader for the strict
+      subset the schema uses, in `codekoll-workspace`, keeping the "picocli is the only runtime
+      dependency" property. 366 lines, 24 tests, over half of them hostile input. A full TOML
+      implementation would also accept dotted keys, inline tables and arrays of tables —
+      constructs the schema has no meaning for, which is how a typo becomes a valid document.
+- [x] Config resolution order and merging (CLI-SPEC §10), with **per-value provenance** tracked
+      from the start and surfaced by `--print-config`, which prints key, value and `file:line`
+      for every effective setting.
+- [x] Full schema: `[rules]` (incl. `enable-only`), `[severity]`, `[suppress]`, `[sources]`,
+      `[compile]`, `[resolve]`, `[report]`. Unknown keys are errors and suggest the nearest real
+      key; unknown rule ids and pack names are errors wherever they appear, `[severity]` included.
+      Keys the schema defines but no milestone implements yet (`report.min-attribution`,
+      `report.baseline`, `resolve.timeout`, `rules.rule-path`) parse and print a note naming the
+      milestone they arrive in, rather than being accepted in silence.
+- [x] Severity overrides applied to `Finding.severity()` before reporting **and** before exit-code
+      computation — an override that changed only the printed word would be obeyed where it shows
+      and ignored where it matters.
+- [x] **Untrusted-repo-config enforcement** (§14): a `codekoll.toml` inside the target repo may not
+      set `resolve.mode = "build"` or `"auto"`, may not set `rule-path`, and may not redirect
+      output outside the repo root. Each violation is a named error, each has a test, and all four
+      were confirmed to go red when the enforcement is deleted.
 - [ ] `--rule-path <jars>`: ServiceLoader over a separate `ModuleLayer`/`URLClassLoader`, third-party
       rules validated against the same metadata contract as built-ins (non-empty
       `description`/`explanation`/`fix`, a `RulePack`) and rejected with a clear message otherwise.
-- [ ] `--print-config` and a documented `codekoll.toml` reference section.
+      **Outstanding.**
+- [x] `--print-config` and a documented `codekoll.toml` reference section.
 
 **Exit criterion:** a `codekoll.toml` in a fixture repo demonstrably disables a pack, raises a
 severity and excludes a path; `--print-config` shows where every effective value came from; a
 malicious fixture repo config attempting build execution and rule-path injection is rejected with
 both violations named; a sample third-party rule pack jar loads via `--rule-path` and fires.
+**Met except the last clause:** 18 end-to-end CLI tests cover disabling a rule and a pack,
+`enable-only`, a severity override that moves the exit code, `[suppress] paths`, report settings,
+CLI-beats-config precedence, `--print-config` output, and four rejections of a hostile repo
+config. The `--rule-path` clause waits on that change.
 
 ## Milestone 13 — Classpath resolution (4–5 days)
 

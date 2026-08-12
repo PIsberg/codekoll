@@ -330,6 +330,7 @@ Extends SPEC §3.4. Resolution order, later overriding earlier:
 disable = ["CK-CRYPTO-WEAK"]
 disable-packs = ["performance"]
 enable-only = []                     # if non-empty, an allowlist
+rule-path = []                       # user config / CLI only — never from the target repo (§14)
 
 [severity]
 "CK-THREAD-RUN" = "error"
@@ -354,13 +355,28 @@ timeout = "120s"
 [report]
 format = "console"
 fail-on = "error"
+absolute-paths = false
+output = "build/codekoll.sarif"      # from the target repo, must stay inside it (§14)
 min-attribution = 0
 baseline = ".codekoll-baseline.json"
 ```
 
 Unknown keys are an error, not a silent no-op — a typo'd rule id in `disable` must not quietly
-leave the rule on. `--print-config` dumps the fully merged effective configuration with the
-provenance of each value, which is the first thing to ask for in a bug report.
+leave the rule on, and neither must a typo'd key. The same applies to a rule id or pack name that
+no rule claims: `disable`, `enable-only`, `disable-packs` and `[severity]` are all checked against
+the registry. `--print-config` dumps the fully merged effective configuration with the provenance
+of each value, which is the first thing to ask for in a bug report.
+
+**A key the schema defines but the current build does not act on is reported, not ignored.**
+`report.min-attribution` (Milestone 14), `report.baseline` (15), `resolve.timeout` (13) and
+`rules.rule-path` (the second half of 12) all parse today and print a stderr note naming the
+milestone they arrive in. Accepting `baseline` in silence would tell a user their findings are
+being filtered against a file nothing reads.
+
+The parser is a hand-rolled reader of the subset above, not a TOML library: the schema is small
+and closed, codekoll ships as one jar with one runtime dependency, and a full implementation would
+accept constructs the schema has no meaning for. Dotted keys, inline tables, arrays of tables,
+multi-line and literal strings, floats and dates are each rejected by name.
 
 ---
 

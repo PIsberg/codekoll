@@ -140,11 +140,12 @@ public interface Rule {
 
 `codekoll.toml` at project root (all optional):
 
-> **Not implemented as of 2026-08-12.** Nothing in `codekoll-cli` reads a config file; the flags
-> and keys below are the design, not the current behaviour. Config loading, provenance and the
-> untrusted-repo-config rules are Milestone 12 of [docs/CLI-PLAN.md](docs/CLI-PLAN.md), which
-> supersedes this section's schema. Inline suppression (`@SuppressWarnings("codekoll:…")` and
-> `// codekoll:off`) *is* implemented.
+> **Implemented, and superseded by [docs/CLI-SPEC.md](docs/CLI-SPEC.md) §10**, which is the
+> authority for the schema. That section adds the resolution order (user config, then the
+> repository's own, then `--config`, then flags), per-value provenance behind `--print-config`,
+> the `[sources]`, `[compile]`, `[resolve]` and `[report]` tables, and the limits on what a target
+> repository's config may set about the machine analyzing it. The sketch below stays accurate as
+> far as it goes.
 
 ```toml
 [rules]
@@ -180,15 +181,16 @@ codekoll [OPTIONS] <path>...
   --packs <names>         comma list; only run these packs
   --rule-path <jars>      extra module path entries scanned for third-party rule packs  [NOT IMPLEMENTED]
   --explain <id>          print a rule's explanation, fix, and example, then exit
-  --config <file>         explicit config path                                          [NOT IMPLEMENTED]
+  --config <file>         explicit config path
 ```
 
 Exit codes: `0` clean / below threshold, `1` findings at/above threshold, `2` usage or internal error.
 
-The CLI also ships `--catalog` (writes the generated rule catalog, the source of `docs/RULES.md`),
-which this section predates. The two flags marked above are specified but absent from
-`codekoll-cli`; both are Milestone 12 of [docs/CLI-PLAN.md](docs/CLI-PLAN.md), whose CLI-SPEC is
-the authority for every flag added by that workstream.
+This section predates the workstream in [docs/CLI-SPEC.md](docs/CLI-SPEC.md), which is the
+authority for the CLI surface and lists the rest of it: workspace flags (`--repo`, `--include`,
+`--exclude`, `--no-tests`, `--no-gitignore`, `--absolute-paths`, `--print-workspace`),
+`--print-config`, `--resolve`, `--verbose`, and `--catalog`. `--rule-path` remains the one flag
+here that the code does not have.
 
 ---
 

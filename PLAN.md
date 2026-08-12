@@ -32,11 +32,11 @@ Wave B). Per-pack counts show it directly: SPEC says `correctness` 28 / `concurr
 
 **What Milestone 10 still owes**, each verified absent in the code rather than inferred:
 
-- `codekoll.toml` loading. SPEC §3.4 specifies the file and §3.5 specifies `--config`; nothing in
-  `codekoll-cli` reads either. Milestone 12 of the CLI plan is where this now lands. Note that
-  README §"How to run" tells users to "configure per-project via `codekoll.toml`" — the one place
-  in the docs where a missing feature is described to a user as working.
-- `--rule-path`. Specified in SPEC §3.5, absent from the CLI and the engine. Also Milestone 12.
+- ~~`codekoll.toml` loading.~~ **Done in CLI-PLAN Milestone 12**: the file is found, validated,
+  merged with the user config and the command line, and `--config` / `--print-config` exist.
+  README §"How to run" no longer describes a feature that is missing.
+- `--rule-path`. Specified in SPEC §3.5, absent from the CLI and the engine. The one piece of
+  Milestone 12 still outstanding; it loads third-party code, so it lands on its own.
 - Console color, `--no-color`, `NO_COLOR`. No occurrence of `NO_COLOR` in `codekoll-report` or
   `codekoll-cli`.
 - Live badges. The README's badge row is eight hand-written shields.io placeholders, not workflow
