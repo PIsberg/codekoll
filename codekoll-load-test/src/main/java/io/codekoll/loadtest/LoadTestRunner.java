@@ -35,7 +35,12 @@ public final class LoadTestRunner {
     Files.createDirectories(resultsDir);
 
     boolean full = "full".equals(profile);
-    int iterations = full ? 5 : 3;
+    int iterations = full ? 7 : 5;
+
+    // Measured before the analyzer so the machine's speed is captured on the same host, in the
+    // same JVM, under whatever contention this run happens to face.
+    long calibration = Calibration.cpuMillis();
+    System.out.println("calibration: " + calibration + " ms for the fixed workload");
 
     Benchmark benchmark = new Benchmark();
     List<Measurement> measurements = new ArrayList<>();
@@ -46,7 +51,7 @@ public final class LoadTestRunner {
     if (Files.isDirectory(examples)) {
       int lines = countLines(examples);
       measurements.add(benchmark.measure("small",
-          collect(examples), lines, iterations));
+          collect(examples), lines, iterations, calibration));
     }
 
     // Generated tiers.
@@ -55,7 +60,7 @@ public final class LoadTestRunner {
       Path dir = work.resolve("gen" + targetLines);
       List<Path> corpus = CorpusGenerator.generate(dir, targetLines);
       measurements.add(benchmark.measure(targetLines / 1000 + "k",
-          corpus, targetLines, iterations));
+          corpus, targetLines, iterations, calibration));
     }
 
     print(measurements);
@@ -111,23 +116,44 @@ public final class LoadTestRunner {
   /** Compares the largest generated tier against baseline; returns 1 on regression. */
   private static int checkRegression(Path baselineFile, List<Measurement> measurements,
       double maxCpu, double maxHeap) throws IOException {
-    if (!Files.exists(baselineFile)) {
-      System.out.println("No baseline.json yet — recording current run as baseline v0.");
+    boolean recording = Boolean.getBoolean("codekoll.loadtest.record");
+    if (recording) {
+      // Deliberate, opt-in, and never a side effect of an ordinary run: a baseline that rewrites
+      // itself is a gate that agrees with whatever it just measured.
+      System.out.println("Recording this run as the baseline (codekoll.loadtest.record=true).");
       writeResults(baselineFile, measurements);
       return 0;
+    }
+    if (!Files.exists(baselineFile)) {
+      System.err.println("REGRESSION GATE NOT RUN: no baseline.json. Record one deliberately"
+          + " with -Dcodekoll.loadtest.record=true and commit it with the reason.");
+      return 1;
     }
     String baseline = Files.readString(baselineFile, StandardCharsets.UTF_8);
     Measurement current = measurements.get(measurements.size() - 1);
     long baseCpu = extractLong(baseline, current.tier(), "cpuMillis");
     long baseHeap = extractLong(baseline, current.tier(), "peakHeapBytes");
+    long baseCalibration = extractLong(baseline, current.tier(), "calibrationMillis");
     if (baseCpu <= 0) {
-      System.out.println("Baseline has no '" + current.tier() + "' tier — skipping gate.");
-      return 0;
+      System.err.println("REGRESSION GATE NOT RUN: baseline has no '" + current.tier()
+          + "' tier. Record one deliberately; a gate that cannot compare is not a gate that"
+          + " passed.");
+      return 1;
     }
-    double cpuDelta = (current.cpuMillis() - baseCpu) / (double) baseCpu;
+    if (baseCalibration <= 0) {
+      System.err.println("REGRESSION GATE NOT RUN: baseline predates calibration and its raw"
+          + " milliseconds are not comparable across machines. Re-record it deliberately.");
+      return 1;
+    }
+
+    // Ratios, not milliseconds: see Calibration. The same unchanged code measured +13.7 %,
+    // +15.8 % and +35.8 % against a raw-millisecond baseline on three CI runners.
+    double baseCost = baseCpu / (double) baseCalibration;
+    double cpuDelta = (current.calibratedCost() - baseCost) / baseCost;
     double heapDelta = (current.peakHeapBytes() - baseHeap) / (double) baseHeap;
-    System.out.printf(Locale.ROOT, "vs baseline (%s): CPU %+.1f%%, heap %+.1f%%%n",
-        current.tier(), cpuDelta * 100, heapDelta * 100);
+    System.out.printf(Locale.ROOT,
+        "vs baseline (%s): CPU %+.1f%% (calibrated: %.2f now, %.2f baseline), heap %+.1f%%%n",
+        current.tier(), cpuDelta * 100, current.calibratedCost(), baseCost, heapDelta * 100);
     boolean fail = false;
     if (cpuDelta > maxCpu) {
       System.err.printf(Locale.ROOT, "REGRESSION: CPU +%.1f%% exceeds +%.0f%% budget%n",

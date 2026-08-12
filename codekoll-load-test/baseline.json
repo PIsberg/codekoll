@@ -1,4 +1,4 @@
 [
-  {"tier":"small","sourceLines":3347,"findings":101,"wallMillis":851,"cpuMillis":2281,"peakHeapBytes":53874984},
-  {"tier":"100k","sourceLines":100000,"findings":0,"wallMillis":6450,"cpuMillis":6519,"peakHeapBytes":117041208}
+  {"tier":"small","sourceLines":3653,"findings":109,"wallMillis":804,"cpuMillis":1468,"peakHeapBytes":54691648,"calibrationMillis":109},
+  {"tier":"100k","sourceLines":100000,"findings":0,"wallMillis":9950,"cpuMillis":10515,"peakHeapBytes":46868776,"calibrationMillis":109}
 ]

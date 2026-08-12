@@ -20,7 +20,7 @@ Status of `main` at commit `8b2cdcd`, established by reading the tree rather tha
 | Milestones 0–5 | Complete. Engine, dispatcher, suppression, ArchUnit suite, ARCHITECTURE.md, all nine founding rules. |
 | Milestones 6–7 | Complete except four rules, listed below. |
 | Milestone 8 | Complete — 110 example classes, verification suite, generated `docs/RULES.md`. |
-| Milestone 9 | Complete — `codekoll-load-test`, `baseline.json`, `docs/perf/*.png`, `loadtest` CI job. Gate implemented; *never demonstrated red* (see below). |
+| Milestone 9 | Complete — `codekoll-load-test`, `baseline.json`, `docs/perf/*.png`, `loadtest` CI job. The gate compares calibrated ratios rather than raw milliseconds (it fired on unrelated pull requests otherwise), and has now been **demonstrated red** on a seeded slowdown: +24.2 % CPU against a +15 % budget. |
 | Milestone 10 | **Partial.** Reporters, `--explain`, `--catalog`, seven CI jobs and the generated catalog are done. Four items are not. |
 | Milestones 11–16 | Separate workstream in [docs/CLI-PLAN.md](docs/CLI-PLAN.md). Milestone 11's library half is written but **is not on `main`** (see below). |
 
@@ -59,9 +59,11 @@ Wave B). Per-pack counts show it directly: SPEC says `correctness` 28 / `concurr
    module-by-module or the documents stop claiming a number nobody is held to. Unchanged here on
    purpose — it is a project decision, and quietly editing either side would hide it.
 
-**Not verified in this pass** (claimed by a milestone, not checked against a run): that the
-load-test gate actually fails on a seeded 20 % slowdown — `codekoll-load-test` has no test
-directory, so the gate's own gate is unproven; and that `mvn verify` is green right now.
+~~**Not verified in this pass:** that the load-test gate actually fails on a seeded slowdown.~~
+**Verified since.** A seeded ~25 % slowdown in `CompilationDriver` moved the calibrated CPU cost
+from 96.5 to 119.8 and the gate reported `REGRESSION: CPU +24.2% exceeds +15% budget`. Removing
+the seed put it back to +4.2 %. `codekoll-load-test` still has no test directory; the gate is
+exercised by running it, which is the only way this particular check can be honest.
 
 ## Milestone 0 — Project skeleton + quality gates (1–1½ days)
 

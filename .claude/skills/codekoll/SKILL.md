@@ -53,7 +53,7 @@ mvn -pl codekoll-load-test verify -Pfull     # full perf suite + chart regenerat
 
 Dogfooding note: the `selfcheck` gate passes `--resolve none` on purpose. Discovery's `--classpath` replaces javac's fat-jar fallback, which is where `jspecify` comes from when codekoll analyzes itself; without it 55 of codekoll's own files stop type-checking and the gate quietly weakens. See the comment in `codekoll-cli/pom.xml`.
 
-Perf note: `baseline.json` in `codekoll-load-test` is a gate like any other — never refresh it as a side effect; a deliberate baseline update goes in its own PR with the reason stated.
+Perf note: `baseline.json` in `codekoll-load-test` is a gate like any other — never refresh it as a side effect; a deliberate baseline update goes in its own PR with the reason stated. Recording is opt-in and cannot happen by accident: `mvn -pl codekoll-load-test -am -Pquick verify -DskipTests -Dcodekoll.loadtest.record=true`. The gate compares CPU **relative to a calibration workload** measured on the same host in the same JVM, so a slower CI runner does not read as a regression; raw milliseconds moved ±20 % between runs of identical code.
 
 Never "fix" a red gate by disabling it or raising thresholds. If a tool lags JDK 25, pin a version and document the workaround in ARCHITECTURE.md.
 
