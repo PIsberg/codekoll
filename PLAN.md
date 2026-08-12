@@ -12,7 +12,9 @@ Codekoll analyzes **its own production sources** as part of every `mvn verify`, 
 
 ## Where we are — 2026-08-12
 
-Status of `main` at commit `8b2cdcd`, established by reading the tree rather than the history:
+Status of `main` at commit `5babe8b`, established by reading the tree rather than the history.
+(First written against `8b2cdcd`; PRs #23–#25 have landed since, and the two rows they changed are
+marked below.)
 
 | | State |
 |---|---|
@@ -22,7 +24,7 @@ Status of `main` at commit `8b2cdcd`, established by reading the tree rather tha
 | Milestone 8 | Complete — 110 example classes, verification suite, generated `docs/RULES.md`. |
 | Milestone 9 | Complete, with one honest limitation. `codekoll-load-test`, `baseline.json`, `docs/perf/*.png` and the `loadtest` CI job all exist, baselines are **per environment** (`ci-linux`, `dev-windows`), and the gate has been **demonstrated red** on a real doubling of work. But CPU time is not measurable to ±15 % on a machine doing anything else — two CI runs of identical code differed by 2.1× — so the `quick` profile checks for a doubling, and heap keeps the tight budget (it moved 0.6 % between two CI runs and 11.2 % across three — noisier than first claimed, and still a fraction of CPU's spread). A ±15 % CPU gate needs a quiet, dedicated runner, which is CLI-PLAN Milestone 16's business. |
 | Milestone 10 | **Partial.** Reporters, `--explain`, `--catalog`, seven CI jobs and the generated catalog are done. Four items are not. |
-| Milestones 11–16 | Separate workstream in [docs/CLI-PLAN.md](docs/CLI-PLAN.md). Milestone 11's library half is written but **is not on `main`** (see below). |
+| Milestones 11–16 | Separate workstream in [docs/CLI-PLAN.md](docs/CLI-PLAN.md). **Milestone 11 is complete** (PRs #24, #25): `codekoll-workspace` is on `main`, the CLI discovers a workspace on every run, analyzes per unit, and reports repo-relative paths. Milestone 12 is next. |
 
 **The four unimplemented rules** (specified in SPEC §6, no implementation, no fixtures, no example):
 `CK-ARRAY-AS-KEY` and `CK-WALLCLOCK-ELAPSED` (`correctness`, Milestone 6 Wave A),
@@ -43,15 +45,15 @@ Wave B). Per-pack counts show it directly: SPEC says `correctness` 28 / `concurr
   status badges, so a red gate leaves them green — the one thing the milestone said badges must
   not do. The seven CI jobs they should point at do exist.
 
-**Two open discrepancies that need a decision, not a doc edit:**
+**One open discrepancy that needs a decision, not a doc edit:**
 
-1. **Milestone 11's library half is stranded on a branch.** `feat/workspace-discovery` (commit
-   `3a3c2e4`, 3 730 lines: the `codekoll-workspace` module, 110 tests, and **`docs/CLI-SPEC.md`**)
-   was merged into `fix/output-purity-and-intern-idiom` an hour *after* that branch had already
-   merged to `main`, so PR #14 reads as merged while none of its content reached `main`. Two
-   consequences on `main` today: the eighth module does not exist, and `docs/CLI-PLAN.md` opens by
-   calling itself a companion to a `docs/CLI-SPEC.md` that is not in the repository. Recovering it
-   is a cherry-pick of `3a3c2e4` onto `main`, in its own PR.
+1. ~~**Milestone 11's library half is stranded on a branch.**~~ **Resolved by PR #24.**
+   `feat/workspace-discovery` (commit `3a3c2e4`, 3 730 lines: the `codekoll-workspace` module, 110
+   tests, and `docs/CLI-SPEC.md`) had been merged into `fix/output-purity-and-intern-idiom` an hour
+   *after* that branch itself merged to `main`, so PR #14 read as merged while none of its content
+   reached `main`. Cherry-picked onto `main` unmodified. Kept here rather than deleted: a "merged"
+   PR whose content is absent is worth recognising a second time, and the fix left one trace —
+   `ci.yml` names its reactor modules explicitly in five steps and had to learn about the eighth.
 2. **The coverage bar the documents claim is not the one the build enforces.** This preamble,
    `docs/CLI-PLAN.md` and `SKILL.md` all say ≥ 90 % line / ≥ 85 % branch; `pom.xml` sets
    `jacoco.line.minimum` to `0.50` and `jacoco.branch.minimum` to `0.40`. Raising the properties
