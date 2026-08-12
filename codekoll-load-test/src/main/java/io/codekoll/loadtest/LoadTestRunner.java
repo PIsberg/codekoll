@@ -198,9 +198,10 @@ public final class LoadTestRunner {
    * <p>So {@code quick}, which runs on every push wherever a runner is free, checks for a
    * doubling rather than a creep. That is a weaker gate, and saying so is the honest alternative
    * to one that fails Markdown-only pull requests until everybody learns to ignore it. Two things
-   * keep it worth running: heap keeps the tight budget, because it measured 103 MB across both CI
-   * runs to within 0.6 % and depends on the work rather than on the host; and the findings count
-   * is recorded, so two versions doing different amounts of work is visible.
+   * keep it worth running: heap holds its ±20 % budget, having moved 0.6 % between two CI runs
+   * and 11.2 % across three, which is a fraction of CPU's 2.1x and follows the work more than the
+   * host; and the findings count is recorded, so two versions doing different amounts of work
+   * shows up whatever the timings say.
    *
    * <p>The tight CPU budget belongs where the machine is quiet and known. That is the nightly
    * {@code full} profile, which keeps {@code maxCpuRegression} as configured — on a dedicated
