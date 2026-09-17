@@ -10,6 +10,13 @@
     <Bug pattern="IMPROPER_UNICODE"/>
   </Match>
 
+  <!-- PqcCatalog folds algorithm names from the analyzed program's source with Locale.ROOT to look
+       them up in a closed catalog of JDK algorithm names, the same case-insensitive lookup
+       WeakCryptoRule does. The folded text only selects a finding message; it never gates access. -->
+  <Match>
+    <Class name="~io\.codekoll\.rules\.pqc\.PqcCatalog.*"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
   <!-- PomReader.secureBuilder() sets FEATURE_SECURE_PROCESSING, disallow-doctype-decl, both
        external-entity features, XIncludeAware(false), expandEntityReferences(false) and empty
        ACCESS_EXTERNAL_DTD/ACCESS_EXTERNAL_SCHEMA before returning the DocumentBuilder that
