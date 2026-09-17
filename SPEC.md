@@ -512,8 +512,10 @@ matched by token because those providers spell each family many ways (ECIES, ECM
 PLAIN-ECDSA, SM2, GOST3410, ECGOST3410, ElGamal; verified against Bouncy Castle 1.83). Their
 post-quantum spellings, including composites that pair one with a classical algorithm, classify as
 safe. The completeness test covers the JDK's providers only, since codekoll has no third-party
-provider on its test classpath. JOSE/JWT libraries and `HPKEParameterSpec` (JDK 26 only) are not
-covered yet.
+provider on its test classpath. JOSE/JWT algorithm constants (`RS256`, `ES256`, `EdDSA`, `RSA-OAEP-256`,
+`ECDH-ES+A128KW`, and the symmetric ones as exemptions) are matched by simple name on the
+library types that hold them, the way the frameworks pack matches annotations.
+`HPKEParameterSpec` (JDK 26 only) is not covered yet.
 
 ---
 

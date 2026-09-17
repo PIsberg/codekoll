@@ -87,6 +87,27 @@ class PqcKeyExchangeRuleTest {
         """);
   }
 
+  /** JOSE key-management algorithms: RSA key transport and ECDH-ES are quantum-vulnerable. */
+  @Test
+  void flagsJoseKeyManagementConstants() {
+    RuleTestHarness.assertFixture(rule, "P5", """
+        class P5 {
+          static final class JWEAlgorithm {
+            static final String RSA_OAEP_256 = "RSA-OAEP-256";
+            static final String ECDH_ES_A128KW = "ECDH-ES+A128KW";
+            static final String A128KW = "A128KW";
+          }
+          Object[] m() {
+            return new Object[] {
+              JWEAlgorithm.RSA_OAEP_256, // :: CK-PQC-KEY-EXCHANGE
+              JWEAlgorithm.ECDH_ES_A128KW, // :: CK-PQC-KEY-EXCHANGE
+              JWEAlgorithm.A128KW,
+            };
+          }
+        }
+        """);
+  }
+
   @Test
   void ignoresPostQuantumSymmetricAndPasswordBasedNames() {
     RuleTestHarness.assertFixture(rule, "N1", """

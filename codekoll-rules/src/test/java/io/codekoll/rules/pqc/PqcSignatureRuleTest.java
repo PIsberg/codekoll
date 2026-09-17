@@ -51,6 +51,35 @@ class PqcSignatureRuleTest {
         """);
   }
 
+  /**
+   * JOSE libraries name the algorithm with a constant, not a JCA string. The fixture declares its
+   * own stand-ins because codekoll does not depend on JJWT or Nimbus: matching is by simple name,
+   * as the frameworks pack matches annotations.
+   */
+  @Test
+  void flagsJoseSignatureConstants() {
+    RuleTestHarness.assertFixture(rule, "P3", """
+        class P3 {
+          static final class SignatureAlgorithm {
+            static final String RS256 = "RS256";
+            static final String HS256 = "HS256";
+          }
+          static final class JWSAlgorithm {
+            static final String ES256 = "ES256";
+            static final String EdDSA = "EdDSA";
+          }
+          Object[] m() {
+            return new Object[] {
+              SignatureAlgorithm.RS256, // :: CK-PQC-SIGNATURE
+              JWSAlgorithm.ES256, // :: CK-PQC-SIGNATURE
+              JWSAlgorithm.EdDSA, // :: CK-PQC-SIGNATURE
+              SignatureAlgorithm.HS256,
+            };
+          }
+        }
+        """);
+  }
+
   @Test
   void ignoresPostQuantumAndMacNames() {
     RuleTestHarness.assertFixture(rule, "N1", """

@@ -1,6 +1,7 @@
 package io.codekoll.rules.pqc;
 
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.util.TreePathScanner;
 import io.codekoll.api.RuleId;
@@ -22,7 +23,8 @@ public final class PqcSignatureRule extends AbstractRule {
   private static final RuleId ID = new RuleId("CK-PQC-SIGNATURE");
 
   private static final Set<RequestType> REPORTED = EnumSet.of(RequestType.SIGNATURE,
-      RequestType.TLS_SIGNATURE_SCHEME, RequestType.XML_SIGNATURE_METHOD);
+      RequestType.TLS_SIGNATURE_SCHEME, RequestType.XML_SIGNATURE_METHOD,
+      RequestType.JOSE_SIGNATURE);
 
   @Override
   public RuleId id() {
@@ -94,6 +96,16 @@ public final class PqcSignatureRule extends AbstractRule {
             .ifPresent(request -> ctx.report(node,
                 PqcGuidance.signature(request.vulnerableNames(), builtIn(ctx))));
         return super.visitMethodInvocation(node, ctx);
+      }
+
+      /** JOSE algorithm constants are field accesses, not calls. */
+      @Override
+      public Void visitMemberSelect(MemberSelectTree node, RuleContext ctx) {
+        PqcSites.match(getCurrentPath(), ctx)
+            .filter(request -> REPORTED.contains(request.type()))
+            .filter(request -> !request.vulnerable().isEmpty())
+            .ifPresent(request -> ctx.report(node, PqcGuidance.signature(request.vulnerableNames(), builtIn(ctx))));
+        return super.visitMemberSelect(node, ctx);
       }
     };
   }
