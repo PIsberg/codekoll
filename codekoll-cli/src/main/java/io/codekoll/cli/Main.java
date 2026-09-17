@@ -204,7 +204,7 @@ public final class Main implements Callable<Integer> {
     }
 
     AnalysisResult result = applyOverrides(analyze(workspace, rules), severityOverrides);
-    reporter(workspace, settings).report(result.findings(), out);
+    reporter(workspace, settings, rules).report(result.findings(), out);
     reportDiagnostics(workspace, result);
     configDiagnostics.forEach(this::warn);
     settings.notes().forEach(this::warn);
@@ -292,11 +292,11 @@ public final class Main implements Callable<Integer> {
         : workspace::relativize;
   }
 
-  private Reporter reporter(Workspace workspace, Settings settings) {
+  private Reporter reporter(Workspace workspace, Settings settings, List<Rule> rules) {
     PathRenderer renderer = pathRenderer(workspace, settings);
     return switch (settings.string("report.format", format, "console")) {
       case "json" -> new JsonReporter(renderer);
-      case "sarif" -> new SarifReporter(renderer);
+      case "sarif" -> new SarifReporter(renderer, rules);
       default -> new ConsoleReporter(renderer);
     };
   }
