@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,8 +31,7 @@
 
 ## Notes
 
-- 3 [NEEDS CLARIFICATION] markers remain (User Story 4 / FR-015 remediation scope, FR-011 remediation target, FR-014 default enablement). Resolve before `/speckit-plan`.
-- "No implementation details": the product is a source analyzer, so algorithm names (RSA, ML-KEM) and the kinds of cryptographic request it detects are domain vocabulary, not implementation choices. The spec names no internal module, class, parser or data structure. Existing codekoll mechanisms (baseline, suppression, severity override, examples module) are referenced as dependencies, not designed.
-- "Written for non-technical stakeholders": the audience is security and platform engineers; the Context section explains the quantum threat and the key-establishment-versus-signature urgency split in plain terms.
-- User Story 4 intentionally has no acceptance scenarios until Question 1 is answered.
-- Iteration 1 of 3.
+- Iteration 2 (2026-09-17, during `/speckit-plan`): all 3 markers resolved in the Clarifications session (plus a fourth question on coverage width). 0 markers remain.
+- Spec corrected against the code during planning: baseline support and `@SuppressWarnings` suppression are not implemented (now under Dependencies); the `CK-INSECURE-RANDOM` test-source precedent does not exist in code; HPKE parameter selections moved to a follow-up because codekoll builds on JDK 25.
+- "No implementation details": the product is a source analyzer, so algorithm names and the kinds of cryptographic request it detects are domain vocabulary. Internal design lives in plan.md, research.md and data-model.md, not the spec.
+- "Written for non-technical stakeholders": the audience is security and platform engineers; the Context section explains the quantum threat and the urgency split in plain terms.
