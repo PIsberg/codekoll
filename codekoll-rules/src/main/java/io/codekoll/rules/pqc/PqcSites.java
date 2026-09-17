@@ -92,6 +92,15 @@ final class PqcSites {
 
   private static final List<String> NAMED_SPEC_FIELDS = List.of("X25519", "X448", "ED25519", "ED448");
 
+  /**
+   * Types whose constants name a JOSE algorithm, matched by simple name the way the frameworks pack
+   * matches annotations: the analyzed project has the library on its classpath, codekoll does not.
+   * {@code SIG} is JJWT's nested registry ({@code Jwts.SIG.RS256}); the {@code JW*Algorithm} names
+   * are Nimbus'.
+   */
+  private static final List<String> JOSE_TYPES =
+      List.of("SignatureAlgorithm", "JWSAlgorithm", "JWEAlgorithm", "SIG", "KEY");
+
   /** Method names a site can have; checked on the javac {@code Name} so non-matches allocate nothing. */
   private static final List<String> SITE_METHODS = List.of("getInstance", "setNamedGroups",
       "setSignatureSchemes", "setCipherSuites", "setEnabledCipherSuites", "setProperty",
@@ -243,6 +252,10 @@ final class PqcSites {
   }
 
   private static Optional<Request> matchConstant(TreePath path, MemberSelectTree select, RuleContext ctx) {
+    Optional<Request> jose = matchJoseConstant(select);
+    if (jose.isPresent()) {
+      return jose;
+    }
     if (!isOneOf(select.getIdentifier(), NAMED_SPEC_FIELDS)) {
       return Optional.empty();
     }
@@ -265,6 +278,27 @@ final class PqcSites {
       }
     }
     return false;
+  }
+
+  /** {@code SignatureAlgorithm.RS256}, {@code Jwts.SIG.RS256}, {@code JWEAlgorithm.RSA_OAEP_256}. */
+  private static Optional<Request> matchJoseConstant(MemberSelectTree select) {
+    Name owner;
+    if (select.getExpression() instanceof MemberSelectTree qualified) {
+      owner = qualified.getIdentifier();
+    } else if (select.getExpression() instanceof IdentifierTree plain) {
+      owner = plain.getName();
+    } else {
+      return Optional.empty();
+    }
+    if (!isOneOf(owner, JOSE_TYPES)) {
+      return Optional.empty();
+    }
+    String constant = select.getIdentifier().toString();
+    return PqcCatalog.classify(RequestType.JOSE_SIGNATURE, constant)
+        .map(c -> new Request(select, RequestType.JOSE_SIGNATURE, List.of(new Named(constant, c))))
+        .or(() -> PqcCatalog.classify(RequestType.JOSE_KEY_MANAGEMENT, constant)
+            .map(c -> new Request(select, RequestType.JOSE_KEY_MANAGEMENT,
+                List.of(new Named(constant, c)))));
   }
 
   private static Optional<Request> request(Tree tree, RequestType type, List<String> written) {

@@ -14,5 +14,9 @@ enum RequestType {
   TLS_NAMED_GROUP,
   TLS_CIPHER_SUITE,
   TLS_SIGNATURE_SCHEME,
-  XML_SIGNATURE_METHOD
+  XML_SIGNATURE_METHOD,
+  /** A JOSE/JWT library's signature algorithm constant, for example {@code RS256}. */
+  JOSE_SIGNATURE,
+  /** A JOSE/JWT library's key-management algorithm constant, for example {@code RSA-OAEP-256}. */
+  JOSE_KEY_MANAGEMENT
 }

@@ -1,6 +1,7 @@
 package io.codekoll.rules.pqc;
 
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.util.TreePathScanner;
 import io.codekoll.api.RuleId;
@@ -22,7 +23,8 @@ public final class PqcKeyExchangeRule extends AbstractRule {
   private static final RuleId ID = new RuleId("CK-PQC-KEY-EXCHANGE");
 
   private static final Set<RequestType> REPORTED = EnumSet.of(RequestType.KEY_AGREEMENT,
-      RequestType.KEM, RequestType.CIPHER, RequestType.TLS_NAMED_GROUP, RequestType.TLS_CIPHER_SUITE);
+      RequestType.KEM, RequestType.CIPHER, RequestType.TLS_NAMED_GROUP,
+      RequestType.TLS_CIPHER_SUITE, RequestType.JOSE_KEY_MANAGEMENT);
 
   /** Classical agreement next to ML-KEM in one method is the recommended hybrid, not a finding. */
   private static final Set<RequestType> HYBRID_CANDIDATES =
@@ -101,6 +103,17 @@ public final class PqcKeyExchangeRule extends AbstractRule {
             .ifPresent(request -> ctx.report(node,
                 PqcGuidance.keyEstablishment(request.vulnerableNames(), builtIn(ctx))));
         return super.visitMethodInvocation(node, ctx);
+      }
+
+      /** JOSE algorithm constants are field accesses, not calls. */
+      @Override
+      public Void visitMemberSelect(MemberSelectTree node, RuleContext ctx) {
+        PqcSites.match(getCurrentPath(), ctx)
+            .filter(request -> REPORTED.contains(request.type()))
+            .filter(request -> !request.vulnerable().isEmpty())
+            .ifPresent(request -> ctx.report(node,
+                PqcGuidance.keyEstablishment(request.vulnerableNames(), builtIn(ctx))));
+        return super.visitMemberSelect(node, ctx);
       }
     };
   }
