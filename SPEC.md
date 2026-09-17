@@ -251,7 +251,7 @@ Listed in implementation order (easiest → hardest). "Needs types" = requires a
 
 ### 5.3 CK-CRYPTO-WEAK — Weak crypto algorithm
 - **Detect:** invocations of `MessageDigest.getInstance`, `Cipher.getInstance`, `Mac.getInstance`, `KeyGenerator.getInstance`, `SecretKeyFactory.getInstance` where argument 0 is a **string literal** (or a constant-folded `static final String`, via the attributed tree's constant value).
-- **Blocklist (case-insensitive, matched on the algorithm segment before any `/` transformation suffix):** `MD2`, `MD5`, `SHA-1`, `SHA1`, `DES`, `DESede` (flag as INFO), `RC2`, `RC4`, `ARCFOUR`, `Blowfish`. Also flag `Cipher` transformations using `ECB` mode or `NoPadding` with block ciphers (INFO level).
+- **Blocklist (case-insensitive, matched on the algorithm segment before any `/` transformation suffix):** `MD2`, `MD5`, `SHA-1`, `SHA1`, `DES`, `DESede` (flag as INFO), `RC2`, `RC4`, `ARCFOUR`, `Blowfish`. Also flag `Cipher` transformations using `ECB` mode or `NoPadding` with block ciphers (INFO level). *(Exempt asymmetric ciphers, whose transformations the JCA spells `RSA/ECB/<padding>`: there ECB means "one block", not the mode. Flagging `RSA/ECB/OAEPWithSHA-256AndMGF1Padding`, the standard way to request OAEP, reported an error and failed default builds.)*
 - **Non-literal argument:** not flagged (v1) — no interprocedural constant propagation.
 - **Message:** "MD5 is cryptographically broken (collision attacks). Use SHA-256 or stronger."
 

@@ -83,4 +83,35 @@ class WeakCryptoRuleTest {
         }
         """);
   }
+
+  /**
+   * RSA has no block-cipher mode: the JCA spells its transformations RSA/ECB/<padding>, where ECB
+   * means "one block" and not the mode this rule warns about. Flagging it reported an error, and
+   * failed default builds, on the standard way to request OAEP.
+   */
+  @Test
+  void doesNotFlagRsaTransformationsNamingEcb() {
+    RuleTestHarness.assertFixture(rule, "N3", """
+        import javax.crypto.Cipher;
+        class N3 {
+          void m() throws Exception {
+            Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+            Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            Cipher.getInstance("rsa/ecb/oaepwithsha-256andmgf1padding");
+          }
+        }
+        """);
+  }
+
+  @Test
+  void stillFlagsEcbForBlockCiphers() {
+    RuleTestHarness.assertFixture(rule, "P9", """
+        import javax.crypto.Cipher;
+        class P9 {
+          void m() throws Exception {
+            Cipher.getInstance("AES/ECB/PKCS5Padding"); // :: CK-CRYPTO-WEAK
+          }
+        }
+        """);
+  }
 }
