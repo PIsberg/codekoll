@@ -140,6 +140,9 @@ public final class LoadTestRunner {
           "[\n  " + String.join(",\n  ", merged) + "\n]\n");
       System.out.println("Recorded the '" + env + "' baseline (" + kept.size()
           + " entries from other environments kept).");
+      // Echoed because on CI the written file is discarded with the workspace: the entries have
+      // to be readable from the log to be committed.
+      measurements.forEach(m -> System.out.println("  " + m.toJson()));
       return 0;
     }
 

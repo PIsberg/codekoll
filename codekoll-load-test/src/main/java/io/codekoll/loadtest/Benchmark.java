@@ -33,7 +33,7 @@ final class Benchmark {
     }
     List<Long> wall = new ArrayList<>();
     List<Long> cpu = new ArrayList<>();
-    long peakHeap = 0;
+    List<Long> heap = new ArrayList<>();
     long findings = 0;
     for (int i = 0; i < iterations; i++) {
       long startCpu = processCpuNanos();
@@ -44,10 +44,10 @@ final class Benchmark {
       findings = result.findings().size();
       wall.add(wallNanos / 1_000_000);
       cpu.add(cpuNanos / 1_000_000);
-      peakHeap = Math.max(peakHeap, usedHeapAfterGc());
+      heap.add(usedHeapAfterGc());
     }
     return new Measurement(tier, sourceLines, findings,
-        fastest(wall), fastest(cpu), peakHeap, calibrationMillis, env);
+        fastest(wall), fastest(cpu), fastest(heap), calibrationMillis, env);
   }
 
   private static long processCpuNanos() {
@@ -60,6 +60,11 @@ final class Benchmark {
     return System.nanoTime();
   }
 
+  /**
+   * Retained heap after a forced GC, taken as the lowest of the iterations for the same reason CPU
+   * takes the fastest: the lowest reading is the one least polluted by a collection the JVM had not
+   * finished. Taking the highest made the gate swing 12 to 28 MB between identical runs.
+   */
   private static long usedHeapAfterGc() {
     System.gc();
     MemoryMXBean memory = ManagementFactory.getMemoryMXBean();

@@ -545,7 +545,7 @@ Every rule ships with an explicit false-positive budget: **a rule that cries wol
 - **Integration tests:** run the full CLI against a small sample project; snapshot-assert the SARIF output.
 - **Example verification:** the `codekoll-examples` module (see PLAN.md) proves every registered rule fires on realistic, documented example code and stays silent on the corrected variant — a registry-completeness test makes shipping a rule without an example impossible, and a metadata test rejects any rule with an empty `explanation()` or `fix()`.
 - **Self-hosting smoke test:** codekoll runs on its own source in CI with `--fail-on error`.
-- **Load tests:** the `codekoll-load-test` module measures CPU time and peak heap over checked-in and deterministically generated corpora; a quick profile runs on every CI build and fails on regression against a committed baseline (see §10 and PLAN Milestone 9).
+- **Load tests:** the `codekoll-load-test` module measures CPU time and retained heap (used heap after a forced GC, lowest reading of the iterations) in a forked JVM over checked-in and deterministically generated corpora; a quick profile runs on every CI build and fails on regression against a committed baseline (see §10 and PLAN Milestone 9).
 - **Corpus regression (post-v1):** run against 2–3 large OSS codebases, review every finding manually once, then pin the count.
 
 ## 10. Performance Targets
