@@ -114,7 +114,7 @@ public interface Rule {
     RuleId id();              // e.g. "CK-EMPTY-CATCH"
     RulePack pack();          // CORRECTNESS, NUMERIC, CONCURRENCY, RESOURCES,
                               // SECURITY, PERFORMANCE, API_MISUSE, NULLNESS,
-                              // MODERN, FRAMEWORKS
+                              // MODERN, FRAMEWORKS, PQC
     Severity defaultSeverity();
     String description();     // one line: what the rule looks for
     String explanation();     // what is wrong + what happens at runtime
@@ -196,7 +196,7 @@ here that the code does not have.
 
 ## 4. Rule Packs — Overview
 
-Rules are grouped into ten packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
+Rules are grouped into eleven packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
 
 | Pack | Focus | Rules |
 |---|---|---|
@@ -210,9 +210,10 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
-| **Total** | | **114** |
+| `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
+| **Total** | | **117** |
 
-**Implementation status (2026-08-12): 110 of these 114 are implemented on `main`.** The table above
+**Implementation status (2026-09-17): 113 of these 117 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
 reports `correctness` 26 and `concurrency` 12. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
@@ -483,6 +484,27 @@ Scope note: these rules match annotations by qualified name where the framework 
 | `CK-TEST-INVISIBLE` | E | A `@Test`/`@ParameterizedTest`/`@RepeatedTest` method that is **private or static or returns non-void** — JUnit silently skips it (JUnit 4) or fails discovery quietly in common setups (JUnit 5): the test reports green *by never running*. Also flags `@Test` on a class with no test engine visible. |
 | `CK-SLF4J-PLACEHOLDER` | E | SLF4J/Log4j2 logging call with a **constant** format string: count `{}` placeholders vs arguments, honoring the trailing-`Throwable` convention — a mismatch silently truncates the message or drops arguments. (Reuses the CK-FORMAT-MISMATCH parsing machinery.) |
 | `CK-LOG-EXCEPTION-LOST` | W | In a `catch` block, a logging call that includes the caught exception only via string concatenation or `e.getMessage()` — the **stack trace is lost**; `getMessage()` is frequently null. Pass the exception as the final argument: `log.error("Payment failed for {}", orderId, e);`. |
+
+### 6.11 Pack `pqc`
+
+Asymmetric algorithms that a large quantum computer breaks with Shor's algorithm. The code is
+classically sound, so the pack warns and no rule defaults to ERROR: at the default
+`--fail-on error` it cannot fail a build. Names are classified by `pqc-catalog.tsv`, generated
+from the JDK provider registry (names, aliases, OIDs) plus TLS named groups, TLS signature schemes
+and XML DSig `SignatureMethod` URIs; `PqcCatalogCompletenessTest` fails the build when the running
+JDK exposes a name the catalog does not classify. Guidance names ML-KEM (FIPS 203) and ML-DSA
+(FIPS 204) as built into the target platform when the analyzed release's `NamedParameterSpec`
+has the constants JDK 24 added, and Bouncy Castle PQC otherwise. The pack never rewrites code.
+Design record: `specs/001-pqc-migration-scanner/`.
+
+| ID | Sev | Detection |
+|---|---|---|
+| `CK-PQC-KEY-EXCHANGE` | W | Constant names at `KeyAgreement.getInstance` (DiffieHellman, ECDH, XDH, X25519, X448, with aliases and OIDs), `KEM.getInstance("DHKEM")`, `Cipher.getInstance` of RSA in any transformation or HPKE; `SSLParameters.setNamedGroups`; `SSLParameters.setCipherSuites` and `SSLSocket`/`SSLServerSocket`/`SSLEngine.setEnabledCipherSuites` naming a TLS 1.2 suite with RSA, DH(E) or ECDH(E) key exchange; `System`/`Security.setProperty("jdk.tls.namedGroups", ...)`. One finding per call, listing the vulnerable names. *(Exempt: ML-KEM names; symmetric and password-based ciphers; TLS 1.3 suites; non-constant names; a `KeyAgreement` or `KEM` request in a method that also requests ML-KEM, which is the hybrid transition; sources under `src/test`, `src/tests`, `src/testFixtures`, `src/integrationTest`, `src/it`.)* |
+| `CK-PQC-SIGNATURE` | W | Constant names at `Signature.getInstance` (every RSA, RSASSA-PSS, DSA, ECDSA and EdDSA variant, aliases such as `DSS`, `RawDSA`, `PSS`, and OIDs); `SSLParameters.setSignatureSchemes`; the `jdk.tls.client.SignatureSchemes` and `jdk.tls.server.SignatureSchemes` properties; `XMLSignatureFactory.newSignatureMethod` with an RSA, RSA-PSS, DSA, ECDSA or EdDSA `SignatureMethod` constant or URI. *(Exempt: ML-DSA, SLH-DSA, HSS/LMS; HMAC signature methods; non-constant names; test sources.)* |
+| `CK-PQC-KEY-MATERIAL` | I | Constant names at `KeyPairGenerator`/`KeyFactory`/`AlgorithmParameters`/`AlgorithmParameterGenerator.getInstance` for the RSA, RSASSA-PSS, EC, DSA, DiffieHellman, XDH and EdDSA families; `new ECGenParameterSpec`, `ECParameterSpec`, `RSAKeyGenParameterSpec`, `DSAParameterSpec`, `DHParameterSpec`, `DHGenParameterSpec`; `new NamedParameterSpec("X25519")` and the `NamedParameterSpec.X25519`/`X448`/`ED25519`/`ED448` constants. The message names the role the family implies. *(Exempt: post-quantum names; OAEP, GCM and other symmetric parameters; a parameter specification in a method that already reports a key-material request; test sources.)* |
+
+Scope: names the JDK defines. Bouncy Castle-only names, JOSE/JWT libraries and
+`HPKEParameterSpec` (JDK 26 only) are not covered yet.
 
 ---
 
