@@ -36,6 +36,13 @@ public final class WeakCryptoRule extends AbstractRule {
       "javax.crypto.KeyGenerator",
       "javax.crypto.SecretKeyFactory");
 
+  /**
+   * Asymmetric ciphers have no block-cipher mode. The JCA still spells their transformations
+   * {@code RSA/ECB/<padding>}, where ECB means "one block", so ECB there is a naming quirk and not
+   * the mode this rule warns about.
+   */
+  private static final Set<String> NO_BLOCK_MODE = Set.of("RSA");
+
   private static final Map<String, String> BROKEN = Map.ofEntries(
       Map.entry("MD2", "MD2 is cryptographically broken."),
       Map.entry("MD5", "MD5 is cryptographically broken (collision attacks)."),
@@ -125,7 +132,8 @@ public final class WeakCryptoRule extends AbstractRule {
           ctx.report(node, broken + " Use SHA-256 or stronger.");
         } else if ("DESEDE".equals(algorithm)) {
           ctx.report(node, "DESede (3DES) is deprecated (64-bit blocks, sweet32). Prefer AES.");
-        } else if (parts.length > 1 && "ECB".equalsIgnoreCase(parts[1].trim())) {
+        } else if (parts.length > 1 && "ECB".equalsIgnoreCase(parts[1].trim())
+            && !NO_BLOCK_MODE.contains(algorithm)) {
           ctx.report(node, "ECB mode leaks plaintext structure (identical blocks encrypt "
               + "identically). Use GCM or another authenticated mode.");
         }
