@@ -11,6 +11,7 @@ import io.codekoll.rules.support.RuleContext;
 import io.codekoll.rules.support.SourceKinds;
 import java.util.EnumSet;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * CK-PQC-SIGNATURE: signatures a quantum computer can forge (RSA, RSASSA-PSS, DSA, ECDSA, EdDSA),
@@ -64,15 +65,25 @@ public final class PqcSignatureRule extends AbstractRule {
   @Override
   protected TreePathScanner<Void, RuleContext> scanner() {
     return new TreePathScanner<>() {
-      private boolean builtIn;
+      /** Resolved on the first finding only: most units have none and must not load platform symbols. */
+      private @Nullable Boolean builtIn;
 
       @Override
       public Void visitCompilationUnit(CompilationUnitTree node, RuleContext ctx) {
         if (SourceKinds.isTestSource(node)) {
           return null;
         }
-        builtIn = PqcGuidance.builtInPqc(ctx.elements());
+        builtIn = null;
         return super.visitCompilationUnit(node, ctx);
+      }
+
+      private boolean builtIn(RuleContext ctx) {
+        Boolean known = builtIn;
+        if (known == null) {
+          known = PqcGuidance.builtInPqc(ctx.elements());
+          builtIn = known;
+        }
+        return known;
       }
 
       @Override
@@ -81,7 +92,7 @@ public final class PqcSignatureRule extends AbstractRule {
             .filter(request -> REPORTED.contains(request.type()))
             .filter(request -> !request.vulnerable().isEmpty())
             .ifPresent(request -> ctx.report(node,
-                PqcGuidance.signature(request.vulnerableNames(), builtIn)));
+                PqcGuidance.signature(request.vulnerableNames(), builtIn(ctx))));
         return super.visitMethodInvocation(node, ctx);
       }
     };

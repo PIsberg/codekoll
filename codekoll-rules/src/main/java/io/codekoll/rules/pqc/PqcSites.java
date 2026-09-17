@@ -18,11 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import org.jspecify.annotations.Nullable;
@@ -86,7 +86,16 @@ final class PqcSites {
   private static final String XML_SIGNATURE_FACTORY = "javax.xml.crypto.dsig.XMLSignatureFactory";
   private static final String NAMED_PARAMETER_SPEC = "java.security.spec.NamedParameterSpec";
 
-  private static final Set<String> NAMED_SPEC_FIELDS = Set.of("X25519", "X448", "ED25519", "ED448");
+  private static final List<String> NAMED_SPEC_FIELDS = List.of("X25519", "X448", "ED25519", "ED448");
+
+  /** Method names a site can have; checked on the javac {@code Name} so non-matches allocate nothing. */
+  private static final List<String> SITE_METHODS = List.of("getInstance", "setNamedGroups",
+      "setSignatureSchemes", "setCipherSuites", "setEnabledCipherSuites", "setProperty",
+      "newSignatureMethod");
+
+  private static final List<String> SPEC_SIMPLE_NAMES = List.of("NamedParameterSpec",
+      "ECGenParameterSpec", "ECParameterSpec", "RSAKeyGenParameterSpec", "DSAParameterSpec",
+      "DHParameterSpec", "DHGenParameterSpec");
 
   private static final Vulnerable EC_PARAMETERS = new Vulnerable(Family.EC, Role.KEY_MATERIAL, "EC");
   private static final Vulnerable DH_PARAMETERS =
@@ -140,7 +149,8 @@ final class PqcSites {
   }
 
   private static Optional<Request> matchCall(TreePath path, MethodInvocationTree call, RuleContext ctx) {
-    if (!(call.getMethodSelect() instanceof MemberSelectTree select) || call.getArguments().isEmpty()) {
+    if (!(call.getMethodSelect() instanceof MemberSelectTree select) || call.getArguments().isEmpty()
+        || !isOneOf(select.getIdentifier(), SITE_METHODS)) {
       return Optional.empty();
     }
     List<? extends ExpressionTree> args = call.getArguments();
@@ -202,7 +212,10 @@ final class PqcSites {
   }
 
   private static Optional<Request> matchCreation(TreePath path, NewClassTree creation, RuleContext ctx) {
-    if (!creation.getIdentifier().toString().endsWith("ParameterSpec")) {
+    Tree created = creation.getIdentifier();
+    Name simpleName = created instanceof MemberSelectTree qualified ? qualified.getIdentifier()
+        : created instanceof IdentifierTree plain ? plain.getName() : null;
+    if (simpleName == null || !isOneOf(simpleName, SPEC_SIMPLE_NAMES)) {
       return Optional.empty();
     }
     String type = ctx.qualifiedNameOf(ctx.typeOf(path));
@@ -226,10 +239,10 @@ final class PqcSites {
   }
 
   private static Optional<Request> matchConstant(TreePath path, MemberSelectTree select, RuleContext ctx) {
-    String field = select.getIdentifier().toString();
-    if (!NAMED_SPEC_FIELDS.contains(field)) {
+    if (!isOneOf(select.getIdentifier(), NAMED_SPEC_FIELDS)) {
       return Optional.empty();
     }
+    String field = select.getIdentifier().toString();
     Element element = ctx.trees().getElement(path);
     if (!(element instanceof VariableElement)
         || !(element.getEnclosingElement() instanceof TypeElement owner)
@@ -239,6 +252,15 @@ final class PqcSites {
     return PqcCatalog.classify(RequestType.KEY_PAIR_GENERATOR, field)
         .map(c -> new Request(select, RequestType.PARAMETER_SPEC, List.of(new Named(
             c instanceof Vulnerable v ? v.canonicalName() : field, c))));
+  }
+
+  private static boolean isOneOf(Name name, List<String> candidates) {
+    for (String candidate : candidates) {
+      if (name.contentEquals(candidate)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Optional<Request> request(Tree tree, RequestType type, List<String> written) {
