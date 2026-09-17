@@ -112,6 +112,37 @@ class PqcCatalogTest {
         "http://www.w3.org/2001/04/xmldsig-more#hmac-sha256"));
   }
 
+  /**
+   * Names only a third-party provider registers, spelled as Bouncy Castle 1.83 registers them.
+   * Matched by family prefix because BC registers 13 ECIES spellings and 20 SM2 ones.
+   */
+  @Test
+  void providerSpecificClassicalNamesAreVulnerable() {
+    assertEquals(Role.KEY_ESTABLISHMENT, vulnerable(RequestType.CIPHER, "ECIES").role());
+    assertEquals(Role.KEY_ESTABLISHMENT,
+        vulnerable(RequestType.CIPHER, "ECIESwithSHA256andAES-CBC").role());
+    assertEquals(Role.KEY_ESTABLISHMENT, vulnerable(RequestType.CIPHER, "ELGAMAL/PKCS1").role());
+    assertEquals(Role.KEY_ESTABLISHMENT, vulnerable(RequestType.KEY_AGREEMENT, "ECMQV").role());
+    assertEquals(Role.KEY_ESTABLISHMENT, vulnerable(RequestType.KEY_AGREEMENT, "ECDHC").role());
+    assertEquals(Role.SIGNATURE, vulnerable(RequestType.SIGNATURE, "SHA256WITHPLAIN-ECDSA").role());
+    assertEquals(Role.SIGNATURE, vulnerable(RequestType.SIGNATURE, "SHA256WITHSM2").role());
+    assertEquals(Role.SIGNATURE, vulnerable(RequestType.SIGNATURE, "ECGOST3410").role());
+    assertEquals(Role.KEY_MATERIAL, vulnerable(RequestType.KEY_PAIR_GENERATOR, "ECIES").role());
+  }
+
+  /**
+   * A composite that pairs ML-DSA with ECDSA is the recommended hybrid, not a finding, and the
+   * provider's own post-quantum spellings carry no hyphen.
+   */
+  @Test
+  void providerPostQuantumAndHybridNamesAreSafe() {
+    for (String name : List.of("MLDSA44", "MLDSA44-ECDSA-P256-SHA256-PREHASH", "DILITHIUM2",
+        "SPHINCSPLUS", "FALCON-512")) {
+      assertInstanceOf(PostQuantum.class, classify(RequestType.SIGNATURE, name), name);
+    }
+    assertInstanceOf(PostQuantum.class, classify(RequestType.KEM, "KYBER768"));
+  }
+
   @Test
   void unknownNamesStayUnclassified() {
     assertTrue(PqcCatalog.classify(RequestType.SIGNATURE, "NoSuchAlgorithm").isEmpty());
