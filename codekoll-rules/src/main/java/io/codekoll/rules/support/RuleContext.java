@@ -9,6 +9,7 @@ import com.sun.source.util.Trees;
 import io.codekoll.api.Finding;
 import io.codekoll.api.FindingCollector;
 import io.codekoll.api.Rule;
+import io.codekoll.api.SourceKind;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -31,9 +32,11 @@ public final class RuleContext {
   private final SourcePositions positions;
   private final List<String> sourceLines;
   private final Path path;
+  private final SourceKind sourceKind;
 
   RuleContext(Rule rule, CompilationUnitTree unit, Trees trees, Types types, Elements elements,
-      FindingCollector out) {
+      FindingCollector out, SourceKind sourceKind) {
+    this.sourceKind = sourceKind;
     this.rule = rule;
     this.unit = unit;
     this.trees = trees;
@@ -47,6 +50,15 @@ public final class RuleContext {
 
   public CompilationUnitTree unit() {
     return unit;
+  }
+
+  /**
+   * Whether this unit is a test source, as workspace discovery decided. {@link SourceKind#UNKNOWN}
+   * when the caller could not say (fixtures, loose paths); {@link SourceKinds} falls back to the
+   * directory convention there.
+   */
+  public SourceKind sourceKind() {
+    return sourceKind;
   }
 
   public Trees trees() {

@@ -30,6 +30,17 @@ public interface Rule {
   /** How to fix it, one or two sentences. */
   String fix();
 
+  /**
+   * Visits one attributed compilation unit, knowing whether it is a test source.
+   *
+   * <p>The default delegates to {@link #scan(CompilationUnitTree, Trees, Types, Elements,
+   * FindingCollector)}, so a rule that does not care about test sources implements only that one.
+   */
+  default void scan(CompilationUnitTree unit, Trees trees, Types types, Elements elements,
+      FindingCollector out, SourceKind sourceKind) {
+    scan(unit, trees, types, elements, out);
+  }
+
   /** Visit one attributed compilation unit; report findings via the collector. */
   void scan(CompilationUnitTree unit, Trees trees, Types types, Elements elements,
       FindingCollector out);

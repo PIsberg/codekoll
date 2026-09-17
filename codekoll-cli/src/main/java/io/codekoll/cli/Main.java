@@ -336,7 +336,7 @@ public final class Main implements Callable<Integer> {
     for (SourceUnit unit : workspace.units()) {
       AnalysisResult unitResult =
           new CompilationDriver(unit.release(), unit.classpathString())
-              .analyzePaths(unit.files(), rules);
+              .analyzePaths(unit.files(), unit.testSourceRoots(), rules);
       findings.addAll(unitResult.findings());
       skipped.putAll(unitResult.skippedFiles());
       ruleFailures.addAll(unitResult.ruleFailures());

@@ -5,6 +5,7 @@ import com.sun.source.util.JavacTask;
 import com.sun.source.util.Trees;
 import io.codekoll.api.Finding;
 import io.codekoll.api.Rule;
+import io.codekoll.api.SourceKind;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -54,8 +55,24 @@ public final class CompilationDriver {
     this.options = List.copyOf(opts);
   }
 
-  /** Collects {@code .java} files under the given roots (files are taken as-is) and analyzes. */
+  /**
+   * Collects {@code .java} files under the given roots (files are taken as-is) and analyzes them,
+   * without telling rules which files are tests: every unit is {@link SourceKind#UNKNOWN}.
+   */
   public AnalysisResult analyzePaths(List<Path> roots, List<Rule> rules) {
+    return analyzePaths(roots, List.of(), rules, false);
+  }
+
+  /**
+   * As {@link #analyzePaths(List, List)}, with the workspace's test source roots: a file under one
+   * of them is {@link SourceKind#TEST}, any other file is {@link SourceKind#MAIN}.
+   */
+  public AnalysisResult analyzePaths(List<Path> roots, List<Path> testRoots, List<Rule> rules) {
+    return analyzePaths(roots, testRoots, rules, true);
+  }
+
+  private AnalysisResult analyzePaths(List<Path> roots, List<Path> testRoots, List<Rule> rules,
+      boolean sourceKindKnown) {
     List<Path> sources = new ArrayList<>();
     for (Path root : roots) {
       if (Files.isRegularFile(root)) {
@@ -80,27 +97,41 @@ public final class CompilationDriver {
       Iterable<? extends JavaFileObject> units = fm.getJavaFileObjectsFromPaths(sources);
       List<JavaFileObject> list = new ArrayList<>();
       units.forEach(list::add);
-      return analyze(compiler, fm, list, rules);
+      List<Path> normalisedTestRoots = testRoots.stream().map(Path::toAbsolutePath).toList();
+      return analyze(compiler, fm, list, rules,
+          path -> sourceKind(path, normalisedTestRoots, sourceKindKnown));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
   }
 
-  /** Analyzes pre-built file objects (used by the fixture test harness). */
+  /**
+   * Analyzes pre-built file objects (used by the fixture test harness). Source kind is
+   * {@link SourceKind#UNKNOWN}: an in-memory fixture has no build to classify it.
+   */
   public AnalysisResult analyzeFileObjects(List<? extends JavaFileObject> files,
       List<Rule> rules) {
     JavaCompiler compiler = systemCompiler();
     try (StandardJavaFileManager fm =
         compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8)) {
       fm.setLocationFromPaths(StandardLocation.CLASS_OUTPUT, List.of(tempClassOutput()));
-      return analyze(compiler, fm, files, rules);
+      return analyze(compiler, fm, files, rules, path -> SourceKind.UNKNOWN);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
   }
 
+  private static SourceKind sourceKind(Path path, List<Path> testRoots, boolean known) {
+    if (!known) {
+      return SourceKind.UNKNOWN;
+    }
+    Path absolute = path.toAbsolutePath();
+    return testRoots.stream().anyMatch(absolute::startsWith) ? SourceKind.TEST : SourceKind.MAIN;
+  }
+
   private AnalysisResult analyze(JavaCompiler compiler, StandardJavaFileManager fm,
-      List<? extends JavaFileObject> files, List<Rule> rules) throws IOException {
+      List<? extends JavaFileObject> files, List<Rule> rules,
+      java.util.function.Function<Path, SourceKind> sourceKinds) throws IOException {
     if (files.isEmpty()) {
       return new AnalysisResult(List.of(), Map.of(), List.of());
     }
@@ -135,8 +166,9 @@ public final class CompilationDriver {
       }
       SuppressionFilter filter = SuppressionFilter.forUnit(unit);
       FindingSink sink = new FindingSink(findings, filter);
+      SourceKind kind = sourceKinds.apply(path);
       for (Rule rule : rules) {
-        scanGuarded(rule, unit, trees, types, elements, sink, path, ruleFailures);
+        scanGuarded(rule, unit, trees, types, elements, sink, path, ruleFailures, kind);
       }
     }
     findings.sort(Comparator.comparing((Finding f) -> f.file().toString())
@@ -151,9 +183,9 @@ public final class CompilationDriver {
   @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private static void scanGuarded(Rule rule, CompilationUnitTree unit, Trees trees, Types types,
       Elements elements, io.codekoll.api.FindingCollector sink, Path path,
-      List<String> ruleFailures) {
+      List<String> ruleFailures, SourceKind sourceKind) {
     try {
-      rule.scan(unit, trees, types, elements, sink);
+      rule.scan(unit, trees, types, elements, sink, sourceKind);
     } catch (RuntimeException e) {
       ruleFailures.add(rule.id() + " crashed on " + path + ": " + e);
     }

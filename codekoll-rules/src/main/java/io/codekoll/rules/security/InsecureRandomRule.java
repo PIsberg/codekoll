@@ -10,6 +10,7 @@ import io.codekoll.api.Severity;
 import io.codekoll.rules.support.AbstractRule;
 import io.codekoll.rules.support.NullFacts;
 import io.codekoll.rules.support.RuleContext;
+import io.codekoll.rules.support.SourceKinds;
 import java.util.regex.Pattern;
 import javax.lang.model.type.TypeMirror;
 
@@ -65,10 +66,13 @@ public final class InsecureRandomRule extends AbstractRule {
       @Override
       public Void visitNewClass(NewClassTree node, RuleContext ctx) {
         TypeMirror type = ctx.typeOf(new TreePath(getCurrentPath(), node));
+        // SPEC section 6.5: a seeded Random is how a test makes itself deterministic, so the
+        // constant-seed case applies outside test sources only.
         if ("java.util.Random".equals(ctx.qualifiedNameOf(type))
             && node.getArguments().size() == 1
             && NullFacts.unwrap(node.getArguments().get(0))
-                instanceof com.sun.source.tree.LiteralTree) {
+                instanceof com.sun.source.tree.LiteralTree
+            && !SourceKinds.isTestSource(ctx)) {
           ctx.report(node, "new Random(<constant>) replays the same sequence every run — "
               + "predictable output. Seed from entropy, or use SecureRandom.");
         }

@@ -74,7 +74,7 @@ public final class PqcKeyExchangeRule extends AbstractRule {
 
       @Override
       public Void visitCompilationUnit(CompilationUnitTree node, RuleContext ctx) {
-        if (SourceKinds.isTestSource(node)) {
+        if (SourceKinds.isTestSource(ctx)) {
           return null;
         }
         builtIn = null;
