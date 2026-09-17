@@ -42,7 +42,7 @@ class ClasspathResolverTest {
   }
 
   private SourceUnit unit(String name, Path moduleDir) {
-    return new SourceUnit(name, moduleDir, BuildSystem.MAVEN, List.of(moduleDir), List.of(),
+    return new SourceUnit(name, moduleDir, BuildSystem.MAVEN, List.of(moduleDir), List.of(), List.of(),
         21, true, List.of());
   }
 

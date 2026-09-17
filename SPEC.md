@@ -122,6 +122,10 @@ public interface Rule {
     /** Visit one attributed compilation unit; report via the collector. */
     void scan(CompilationUnitTree unit, Trees trees, Types types,
               Elements elements, FindingCollector out);
+    /** As above, told whether the unit is a test source (MAIN/TEST/UNKNOWN).
+        Default delegates, so most rules implement only the method above. */
+    default void scan(CompilationUnitTree unit, Trees trees, Types types,
+              Elements elements, FindingCollector out, SourceKind sourceKind);
 }
 ```
 

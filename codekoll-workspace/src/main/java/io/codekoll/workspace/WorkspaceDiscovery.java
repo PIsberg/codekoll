@@ -324,7 +324,8 @@ public final class WorkspaceDiscovery {
       BuildSystem buildSystem = buildSystemOf(moduleDir);
       Release release = releaseFor(moduleDir, repoRoot, buildSystem);
       units.add(new SourceUnit(nameOf(repoRoot, moduleDir), moduleDir, buildSystem,
-          roots.stream().map(SourceRoot::path).toList(), files,
+          roots.stream().map(SourceRoot::path).toList(),
+          roots.stream().filter(SourceRoot::tests).map(SourceRoot::path).toList(), files,
           release.value(), release.detected(), List.of()));
     }
     return units;
@@ -335,15 +336,16 @@ public final class WorkspaceDiscovery {
     for (Path dir : dirs) {
       List<Path> files = selector.select(dir);
       Release release = releaseFor(dir, repoRoot, buildSystemOf(dir));
+      // A plain directory has no source sets to read test roots from.
       units.add(new SourceUnit(nameOf(repoRoot, dir), dir, BuildSystem.PLAIN,
-          List.of(dir), files, release.value(), release.detected(), List.of()));
+          List.of(dir), List.of(), files, release.value(), release.detected(), List.of()));
     }
     return units;
   }
 
   private SourceUnit explicitUnit(Path repoRoot, List<Path> files, BuildSystem buildSystem) {
     Release release = releaseFor(repoRoot, repoRoot, buildSystem);
-    return new SourceUnit("<files>", repoRoot, buildSystem, List.of(), files,
+    return new SourceUnit("<files>", repoRoot, buildSystem, List.of(), List.of(), files,
         release.value(), release.detected(), List.of());
   }
 

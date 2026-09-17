@@ -21,7 +21,7 @@ class WorkspaceModelTest {
   Path dir;
 
   private static SourceUnit unit(String name, Path moduleDir, List<Path> files) {
-    return new SourceUnit(name, moduleDir, BuildSystem.MAVEN, List.of(moduleDir), files,
+    return new SourceUnit(name, moduleDir, BuildSystem.MAVEN, List.of(moduleDir), List.of(), files,
         21, true, List.of());
   }
 
@@ -114,7 +114,7 @@ class WorkspaceModelTest {
   @Test
   void sourceUnitCollectionsAreDefensivelyCopied() {
     List<Path> files = new ArrayList<>();
-    SourceUnit built = new SourceUnit("a", dir, BuildSystem.MAVEN, List.of(), files,
+    SourceUnit built = new SourceUnit("a", dir, BuildSystem.MAVEN, List.of(), List.of(), files,
         21, true, List.of());
 
     files.add(Path.of("Sneaky.java"));

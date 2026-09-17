@@ -21,6 +21,18 @@ public final class SourceKinds {
     return isTestSource(unit.getSourceFile().toUri());
   }
 
+  /**
+   * Whether to treat this unit as a test. Trusts workspace discovery when it classified the unit,
+   * and falls back to the directory convention only when it could not (fixtures, loose paths).
+   */
+  public static boolean isTestSource(RuleContext ctx) {
+    return switch (ctx.sourceKind()) {
+      case TEST -> true;
+      case MAIN -> false;
+      case UNKNOWN -> isTestSource(ctx.unit());
+    };
+  }
+
   /** True when {@code uri} has a {@code src} directory directly followed by a test source set. */
   public static boolean isTestSource(URI uri) {
     @Nullable String path = uri.getPath();

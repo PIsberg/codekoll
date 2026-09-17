@@ -15,6 +15,8 @@ import java.util.List;
  * @param moduleDir directory holding the unit's build file, or the source root's parent
  * @param buildSystem how this unit's module declares its build
  * @param sourceRoots source roots contributing files (main first, then tests)
+ * @param testSourceRoots the subset of {@code sourceRoots} holding tests, so rules can stay quiet
+ *     there without guessing from the path
  * @param files the {@code .java} files to analyze, sorted for determinism
  * @param release the {@code --release} level to compile at
  * @param releaseDetected whether {@code release} was read from a build file rather than guessed
@@ -25,6 +27,7 @@ public record SourceUnit(
     Path moduleDir,
     BuildSystem buildSystem,
     List<Path> sourceRoots,
+    List<Path> testSourceRoots,
     List<Path> files,
     int release,
     boolean releaseDetected,
@@ -34,14 +37,15 @@ public record SourceUnit(
     // Defensive copies: record components must not alias caller-mutable collections
     // (codekoll's own CK-RECORD-MUTABLE-COMPONENT rule, and SpotBugs EI_EXPOSE_REP).
     sourceRoots = List.copyOf(sourceRoots);
+    testSourceRoots = List.copyOf(testSourceRoots);
     files = List.copyOf(files);
     classpath = List.copyOf(classpath);
   }
 
   /** Returns a copy of this unit with the given classpath. */
   public SourceUnit withClasspath(List<Path> resolved) {
-    return new SourceUnit(name, moduleDir, buildSystem, sourceRoots, files, release,
-        releaseDetected, resolved);
+    return new SourceUnit(name, moduleDir, buildSystem, sourceRoots, testSourceRoots, files,
+        release, releaseDetected, resolved);
   }
 
   /** Returns the classpath joined with the platform separator, empty when there is none. */
