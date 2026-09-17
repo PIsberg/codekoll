@@ -75,10 +75,14 @@ final class PqcSites {
       "java.security.AlgorithmParameters", RequestType.ALGORITHM_PARAMETERS,
       "java.security.AlgorithmParameterGenerator", RequestType.ALGORITHM_PARAMETER_GENERATOR);
 
+  /** Names verified against the JDK 26 implementation classes, not documentation. */
   private static final Map<String, RequestType> TLS_PROPERTIES = Map.of(
       "jdk.tls.namedGroups", RequestType.TLS_NAMED_GROUP,
       "jdk.tls.client.SignatureSchemes", RequestType.TLS_SIGNATURE_SCHEME,
-      "jdk.tls.server.SignatureSchemes", RequestType.TLS_SIGNATURE_SCHEME);
+      "jdk.tls.server.SignatureSchemes", RequestType.TLS_SIGNATURE_SCHEME,
+      "jdk.tls.client.cipherSuites", RequestType.TLS_CIPHER_SUITE,
+      "jdk.tls.server.cipherSuites", RequestType.TLS_CIPHER_SUITE,
+      "https.cipherSuites", RequestType.TLS_CIPHER_SUITE);
 
   private static final String SSL_PARAMETERS = "javax.net.ssl.SSLParameters";
   private static final List<String> SSL_ENDPOINTS =

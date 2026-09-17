@@ -68,6 +68,25 @@ class PqcKeyExchangeRuleTest {
         """);
   }
 
+  /** Suites can also be pinned by system property; the JDK reads three (verified in JDK 26). */
+  @Test
+  void flagsCipherSuitesSetThroughSystemProperties() {
+    RuleTestHarness.assertFixture(rule, "P4", """
+        import java.security.Security;
+        class P4 {
+          void m() {
+            System.setProperty("jdk.tls.client.cipherSuites", // :: CK-PQC-KEY-EXCHANGE
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384");
+            Security.setProperty("jdk.tls.server.cipherSuites", // :: CK-PQC-KEY-EXCHANGE
+                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256");
+            System.setProperty("https.cipherSuites", // :: CK-PQC-KEY-EXCHANGE
+                "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA");
+            System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_128_GCM_SHA256");
+          }
+        }
+        """);
+  }
+
   @Test
   void ignoresPostQuantumSymmetricAndPasswordBasedNames() {
     RuleTestHarness.assertFixture(rule, "N1", """
