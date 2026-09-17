@@ -126,7 +126,7 @@ guessing wrong here changes which rules can fire, so the guess is always visible
 
 ## 4. Classpath resolution
 
-Type-aware rules (the majority of the 114) need the target's dependencies on the classpath. This
+Type-aware rules (the majority of the 117) need the target's dependencies on the classpath. This
 section is the highest-value part of this spec.
 
 ### 4.1 Strategies

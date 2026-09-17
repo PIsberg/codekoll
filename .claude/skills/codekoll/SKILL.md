@@ -8,7 +8,7 @@ description: Use when working on the codekoll Java static analyzer — adding or
 Codekoll is a static analysis tool for Java source (written in **Java 25**) that finds bugs which compile cleanly but fail at runtime. It is built on the JDK Compiler Tree API (`com.sun.source.*` via `JavacTask`), **never** JavaParser and **never** `com.sun.tools.javac.*` internals.
 
 Authoritative documents — read before non-trivial changes, keep in sync with your change:
-- `SPEC.md` — architecture, the 106-rule catalog (ten packs) with detection algorithms and exemptions.
+- `SPEC.md` — architecture, the 117-rule catalog (eleven packs, 113 implemented) with detection algorithms and exemptions.
 - `README.md` — the public pitch (prior-art honesty + differentiators); its rule tables become generated in Milestone 10.
 - `PLAN.md` — milestones, wave ordering, working agreements.
 - `ARCHITECTURE.md` — module graph, engine internals, extension guides (exists from Milestone 1).

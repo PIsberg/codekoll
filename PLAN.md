@@ -1,6 +1,6 @@
 # Codekoll — Implementation Plan
 
-Companion to [SPEC.md](SPEC.md). Milestones are ordered so that every milestone ends with a runnable, testable tool. Rules land in waves: the nine founding rules first (easiest → hardest, per SPEC §5), then the extended catalog (SPEC §6) in two difficulty waves — **106 rules total** across ten packs. (That was the v1 target and is what the Milestone 6–10 exit criteria below are written against; the catalog has since grown to **114 specified rules** — see the SPEC §4 table, which is authoritative for the current count.)
+Companion to [SPEC.md](SPEC.md). Milestones are ordered so that every milestone ends with a runnable, testable tool. Rules land in waves: the nine founding rules first (easiest → hardest, per SPEC §5), then the extended catalog (SPEC §6) in two difficulty waves — **106 rules total** across ten packs. (That was the v1 target and is what the Milestone 6–10 exit criteria below are written against; the catalog has since grown to **117 specified rules** — see the SPEC §4 table, which is authoritative for the current count.)
 
 **Standing quality bar (applies to every milestone, not just the last one):**
 Codekoll is a static analysis tool, so it must hold itself to the standard it enforces on others. From Milestone 0 onward, `mvn verify` runs and **fails the build** on any violation from: Checkstyle, PMD, SpotBugs (+findsecbugs), Error Prone, NullAway (JSpecify nullness), ArchUnit, and JaCoCo coverage thresholds (**≥ 90 % line / ≥ 85 % branch** on production modules). No milestone is complete while any gate is red or suppressed without a written justification comment.
@@ -18,10 +18,10 @@ marked below.)
 
 | | State |
 |---|---|
-| Rules | **110 implemented** of **114 specified** (SPEC §4). Registered in `module-info`, one example class each, all ten packs present. |
+| Rules | **113 implemented** of **117 specified** (SPEC §4). Registered in `module-info`, one example class each, all eleven packs present. |
 | Milestones 0–5 | Complete. Engine, dispatcher, suppression, ArchUnit suite, ARCHITECTURE.md, all nine founding rules. |
 | Milestones 6–7 | Complete except four rules, listed below. |
-| Milestone 8 | Complete — 110 example classes, verification suite, generated `docs/RULES.md`. |
+| Milestone 8 | Complete — 113 example classes, verification suite, generated `docs/RULES.md`. |
 | Milestone 9 | Complete, with one honest limitation. `codekoll-load-test`, `baseline.json`, `docs/perf/*.png` and the `loadtest` CI job all exist, baselines are **per environment** (`ci-linux`, `dev-windows`), and the gate has been **demonstrated red** on a real doubling of work. But CPU time is not measurable to ±15 % on a machine doing anything else — two CI runs of identical code differed by 2.1× — so the `quick` profile checks for a doubling, and heap keeps the tight budget (it moved 0.6 % between two CI runs and 11.2 % across three — noisier than first claimed, and still a fraction of CPU's spread). A ±15 % CPU gate needs a quiet, dedicated runner, which is CLI-PLAN Milestone 16's business. |
 | Milestone 10 | **Partial.** Reporters, `--explain`, `--catalog`, seven CI jobs and the generated catalog are done. Four items are not. |
 | Milestones 11–16 | Separate workstream in [docs/CLI-PLAN.md](docs/CLI-PLAN.md). **Milestone 11 is complete** (PRs #24, #25): `codekoll-workspace` is on `main`, the CLI discovers a workspace on every run, analyzes per unit, and reports repo-relative paths. Milestone 12 is next. |
