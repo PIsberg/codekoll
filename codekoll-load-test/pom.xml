@@ -22,6 +22,8 @@
     <!-- Regression thresholds vs the committed baseline (PLAN M9). -->
     <loadtest.cpu.maxRegression>0.15</loadtest.cpu.maxRegression>
     <loadtest.heap.maxRegression>0.20</loadtest.heap.maxRegression>
+    <!-- Opt-in baseline recording; forwarded to the forked JVM, which inherits no -D flags. -->
+    <codekoll.loadtest.record>false</codekoll.loadtest.record>
   </properties>
 
   <dependencies>
@@ -38,6 +40,13 @@
     </dependency>
   </dependencies>
 
+  <!--
+    Both profiles fork a JVM (exec:exec, not exec:java). The benchmark measures used heap after a
+    forced GC; inside Maven's own JVM it also measured what Checkstyle, PMD and SpotBugs retained
+    from analyzing the reactor earlier in the same invocation, so adding sources to any analyzed
+    module moved the number without changing the analyzer. One machine, one commit, same command:
+    87 MB and 75 MB with those plugins in the JVM, 61 MB and 61 MB with them skipped.
+  -->
   <profiles>
     <!-- quick: small corpus + one 100 kLOC run; wired to CI on every build. -->
     <profile>
@@ -47,15 +56,20 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>3.6.4</version>
             <executions>
               <execution>
                 <id>loadtest-quick</id>
                 <phase>verify</phase>
-                <goals><goal>java</goal></goals>
+                <goals><goal>exec</goal></goals>
                 <configuration>
-                  <mainClass>io.codekoll.loadtest.LoadTestRunner</mainClass>
+                  <executable>${java.home}/bin/java</executable>
                   <arguments>
+                    <argument>-Xmx1g</argument>
+                    <argument>-Dcodekoll.loadtest.record=${codekoll.loadtest.record}</argument>
+                    <argument>-classpath</argument>
+                    <classpath/>
+                    <argument>io.codekoll.loadtest.LoadTestRunner</argument>
                     <argument>quick</argument>
                     <argument>${loadtest.cpu.maxRegression}</argument>
                     <argument>${loadtest.heap.maxRegression}</argument>
@@ -77,15 +91,20 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>3.6.4</version>
             <executions>
               <execution>
                 <id>loadtest-full</id>
                 <phase>verify</phase>
-                <goals><goal>java</goal></goals>
+                <goals><goal>exec</goal></goals>
                 <configuration>
-                  <mainClass>io.codekoll.loadtest.LoadTestRunner</mainClass>
+                  <executable>${java.home}/bin/java</executable>
                   <arguments>
+                    <argument>-Xmx1g</argument>
+                    <argument>-Dcodekoll.loadtest.record=${codekoll.loadtest.record}</argument>
+                    <argument>-classpath</argument>
+                    <classpath/>
+                    <argument>io.codekoll.loadtest.LoadTestRunner</argument>
                     <argument>full</argument>
                     <argument>${loadtest.cpu.maxRegression}</argument>
                     <argument>${loadtest.heap.maxRegression}</argument>

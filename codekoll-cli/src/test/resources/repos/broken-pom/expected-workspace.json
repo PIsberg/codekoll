@@ -1,0 +1,7 @@
+{
+  "buildSystem": "MAVEN",
+  "units": [
+    {"name": ".", "buildSystem": "MAVEN", "release": <jdk>, "releaseDetected": false, "files": 1, "sourceRoots": ["src/main/java"]}
+  ],
+  "diagnostics": ["could not parse <repo>/pom.xml (XML document structures must start and end within the same entity.); falling back to layout-based discovery for this module", "no language level declared for module '.' (Maven); assuming --release <jdk>"]
+}

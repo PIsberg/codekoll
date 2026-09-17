@@ -72,6 +72,22 @@ class SecurityRulesTest {
         """);
   }
 
+  /**
+   * SPEC section 6.5 exempts the constant seed in test sources: a seeded Random is how a test makes
+   * itself deterministic. Fixtures have no build to classify them, so the path convention decides.
+   */
+  @Test
+  void constantSeedAllowedInTestSources() {
+    RuleTestHarness.assertFixture(new InsecureRandomRule(), "src.test.java.N5", """
+        import java.util.Random;
+        class N5 {
+          Random m() {
+            return new Random(42L);
+          }
+        }
+        """);
+  }
+
   @Test
   void secretFromRandomFlagged() {
     RuleTestHarness.assertFixture(new InsecureRandomRule(), "P4", """

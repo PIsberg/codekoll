@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 110 rules.
+Generated from rule metadata — 113 rules.
 
 ## correctness (26)
 
@@ -161,4 +161,12 @@ Generated from rule metadata — 110 rules.
 | `CK-PROXY-SELF-INVOKE` | WARNING | Self-invocation of a @Transactional/@Async method bypasses the proxy |
 | `CK-SLF4J-PLACEHOLDER` | ERROR | SLF4J {} placeholder count does not match the arguments |
 | `CK-TEST-INVISIBLE` | ERROR | @Test method that is private, static, or returns a value |
+
+## pqc (3)
+
+| Rule | Severity | What is wrong |
+|------|----------|---------------|
+| `CK-PQC-KEY-EXCHANGE` | WARNING | Quantum-vulnerable key establishment (RSA encryption, (EC)DH, XDH, DHKEM, HPKE, classical TLS groups and suites) |
+| `CK-PQC-KEY-MATERIAL` | INFO | Quantum-vulnerable key pair, key factory or algorithm parameters (RSA, EC, DSA, DH, XDH, EdDSA) |
+| `CK-PQC-SIGNATURE` | WARNING | Quantum-vulnerable digital signature (RSA, RSASSA-PSS, DSA, ECDSA, EdDSA; TLS signature schemes; XML signature methods) |
 

@@ -116,5 +116,8 @@ module io.codekoll.rules {
       io.codekoll.rules.apimisuse.ToMapDuplicatesRule,
       io.codekoll.rules.apimisuse.ImmutableMutateRule,
       io.codekoll.rules.apimisuse.LocaleCaseRule,
-      io.codekoll.rules.apimisuse.ComputeIfAbsentModRule;
+      io.codekoll.rules.apimisuse.ComputeIfAbsentModRule,
+      io.codekoll.rules.pqc.PqcKeyExchangeRule,
+      io.codekoll.rules.pqc.PqcSignatureRule,
+      io.codekoll.rules.pqc.PqcKeyMaterialRule;
 }

@@ -83,6 +83,48 @@ class RefEqualityRuleTest {
         """);
   }
 
+  /**
+   * Found in the wild: async-test-lib's SynchronizedOnLiteralDetector uses this to detect
+   * interned (literal) strings. Reported as CK-REF-EQUALITY at ERROR; it is deliberate.
+   */
+  @Test
+  void allowsInternIdentityIdiom() {
+    RuleTestHarness.assertFixture(rule, "N5", """
+        class N5 {
+          boolean m(String s) {
+            return s == s.intern();
+          }
+        }
+        """);
+  }
+
+  /**
+   * The same idiom through a cast, as in async-test-lib's BoxedPrimitiveLockDetector:
+   * {@code obj instanceof String && obj == ((String) obj).intern()}.
+   */
+  @Test
+  void allowsInternIdentityIdiomThroughCast() {
+    RuleTestHarness.assertFixture(rule, "N6", """
+        class N6 {
+          boolean m(Object obj) {
+            return obj instanceof String && obj == ((String) obj).intern();
+          }
+        }
+        """);
+  }
+
+  /** A call named intern() on a different receiver is still a reference comparison. */
+  @Test
+  void flagsInternOfADifferentString() {
+    RuleTestHarness.assertFixture(rule, "P4", """
+        class P4 {
+          boolean m(String a, String b) {
+            return a == b.intern(); // :: CK-REF-EQUALITY
+          }
+        }
+        """);
+  }
+
   @Test
   void flagsStringComparisonEvenInsideEqualsWhenNotThis() {
     RuleTestHarness.assertFixture(rule, "P3", """

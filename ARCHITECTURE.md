@@ -21,6 +21,10 @@ codekoll-rules      io.codekoll.rules    Rule packs, one package per pack. Expor
                                          provides io.codekoll.api.Rule with <all rules>.
 codekoll-report     io.codekoll.report   Console/JSON reporters (SARIF in M10).
                                          Depends on api only — never on jdk.compiler.
+codekoll-workspace  io.codekoll.workspace  Target-repo discovery (M11): repo root, build system,
+                                         source units, per-unit language level, hermetic
+                                         classpath discovery. requires java.xml only — not
+                                         jdk.compiler, not api, not the engine.
 codekoll-cli        io.codekoll.cli      picocli front-end; shaded into codekoll.jar.
 codekoll-examples   (non-modular)        One documented buggy/fixed example class per rule
                                          + the E2E verification suite.
@@ -40,6 +44,52 @@ boundaries on the classpath build.
 A useful consequence: the fat jar bundles the analyzer's few dependencies, so when codekoll
 analyzes *itself* with no `--classpath`, javac's default classpath (the fat jar) already
 contains jspecify and picocli — the selfcheck needs no dependency wrangling.
+
+That fallback is fragile in one specific way, and the dogfooding gate depends on it. Since M11
+every run discovers a workspace, and `--resolve discover` assembles a `--classpath` from build
+output found on disk. Passing *any* classpath replaces the default, so jspecify stops resolving
+and 55 of codekoll's own files stop attributing. The `selfcheck` execution therefore passes
+`--resolve none`; the general fix is `--resolve build` (CLI-PLAN Milestone 13).
+
+## How the CLI wires the three worlds together
+
+`codekoll-cli` is the only module that knows about workspace, engine and report at once:
+
+1. `WorkspaceDiscovery.discover(paths)` returns a `Workspace`: repo root, build system, ordered
+   `SourceUnit`s (files + release + classpath), and a diagnostic for every guess it made.
+2. One `CompilationDriver` per unit, each with that unit's `--release` and classpath; the
+   results are merged and sorted once, so output ordering does not depend on how discovery
+   split the repository. (`AnalysisUnit` and `Attribution` in the engine are the shape M14's
+   `analyzeUnits` will take — batching, timeouts and attribution counters belong there.)
+3. Reporters receive a `PathRenderer`. Findings keep absolute paths internally; the CLI hands
+   the reporter `Workspace::relativize`, or the identity renderer under `--absolute-paths`, so
+   `codekoll-report` prints repo-relative paths while still depending on nothing but the api.
+   SARIF needs this specifically: absolute build-agent paths annotate nothing on GitHub.
+
+Configuration sits in front of all three: `ConfigLoader` finds and merges the user config and the
+repository's `codekoll.toml`, `Settings` (in the CLI) resolves each value against the command
+line, and everything downstream reads the merged answer rather than a flag. Because the
+repository's own config decides what discovery does, the repo root is detected first
+(`WorkspaceDiscovery.repoRootFor`) and discovery then runs with options that already include it.
+
+### Why the TOML reader is hand-rolled
+
+`codekoll.toml` is read by ~370 lines in `codekoll-workspace` rather than by a TOML library, for
+two reasons. Codekoll ships as one jar whose only runtime dependency is the CLI parser, and a
+second dependency to read forty lines of configuration is a poor trade. More importantly, a
+complete implementation accepts far more than the schema means: dotted keys, inline tables, arrays
+of tables, dates. In a closed schema those are not features, they are the shapes a typo takes.
+Each is rejected by name with a `file:line`. The cost is that codekoll's config files are not
+arbitrary TOML — deliberately, and the reader says so when it refuses.
+
+### The target repository is untrusted input
+
+A `codekoll.toml` arrives with the repository being analyzed, written by whoever wrote that
+repository — on a foreign repo, not the person running codekoll. It may say what to analyze. It
+may not enable build execution (`resolve.mode`), load code from a path it controls
+(`rules.rule-path`), or redirect output outside itself (`report.output`), per CLI-SPEC §14. The
+same keys are legitimate in the user's own config or on the command line: `ConfigLoader`
+distinguishes them by where the file came from, not by what it contains.
 
 ## Compilation pipeline
 
@@ -109,7 +159,8 @@ engine-side change swaps N full walks for one dispatching walk without touching 
   sources and enforces: findings ≙ markers exactly, every rule has a firing example, naming
   convention (`CK-EMPTY-CATCH` → `EmptyCatchExample.java`), and every example documents
   *What is wrong / What happens at runtime / How to fix*.
-- **ArchUnit** (`codekoll-cli`): the constraints above.
+- **ArchUnit** (`codekoll-cli`, plus `codekoll-workspace` for its own boundaries): the constraints
+  above. Discovery's rules live in the module they constrain so they travel with it.
 - **Dogfooding**: codekoll runs on its own production sources (`--fail-on error`) — see
   PLAN's standing dogfooding gate.
 

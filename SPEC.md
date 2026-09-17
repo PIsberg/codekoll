@@ -114,7 +114,7 @@ public interface Rule {
     RuleId id();              // e.g. "CK-EMPTY-CATCH"
     RulePack pack();          // CORRECTNESS, NUMERIC, CONCURRENCY, RESOURCES,
                               // SECURITY, PERFORMANCE, API_MISUSE, NULLNESS,
-                              // MODERN, FRAMEWORKS
+                              // MODERN, FRAMEWORKS, PQC
     Severity defaultSeverity();
     String description();     // one line: what the rule looks for
     String explanation();     // what is wrong + what happens at runtime
@@ -122,6 +122,10 @@ public interface Rule {
     /** Visit one attributed compilation unit; report via the collector. */
     void scan(CompilationUnitTree unit, Trees trees, Types types,
               Elements elements, FindingCollector out);
+    /** As above, told whether the unit is a test source (MAIN/TEST/UNKNOWN).
+        Default delegates, so most rules implement only the method above. */
+    default void scan(CompilationUnitTree unit, Trees trees, Types types,
+              Elements elements, FindingCollector out, SourceKind sourceKind);
 }
 ```
 
@@ -133,7 +137,19 @@ public interface Rule {
 
 ### 3.4 Configuration
 
+> **Superseded for running against a foreign repository.** [docs/CLI-SPEC.md](docs/CLI-SPEC.md)
+> specifies the full configuration layering (user config → target-repo config → CLI), the complete
+> schema, and the rule that a target repo's own config may not grant itself build execution. This
+> section describes the minimal in-repo form; where the two disagree, CLI-SPEC.md wins.
+
 `codekoll.toml` at project root (all optional):
+
+> **Implemented, and superseded by [docs/CLI-SPEC.md](docs/CLI-SPEC.md) §10**, which is the
+> authority for the schema. That section adds the resolution order (user config, then the
+> repository's own, then `--config`, then flags), per-value provenance behind `--print-config`,
+> the `[sources]`, `[compile]`, `[resolve]` and `[report]` tables, and the limits on what a target
+> repository's config may set about the machine analyzing it. The sketch below stays accurate as
+> far as it goes.
 
 ```toml
 [rules]
@@ -152,6 +168,12 @@ paths = ["**/generated/**", "**/target/**"]
 
 ### 3.5 CLI
 
+> **The authoritative CLI surface is [docs/CLI-SPEC.md §11](docs/CLI-SPEC.md#11-cli-surface).**
+> The flag set below is the v1 core; CLI-SPEC.md adds workspace discovery (`--repo`,
+> `--print-workspace`), classpath resolution (`--resolve`), degraded-mode gating
+> (`--min-attribution`), and adoption flags (`--baseline`, `--changed-since`). Exit codes are
+> unchanged: `0` below threshold, `1` at/above threshold, `2` usage/internal error.
+
 ```
 codekoll [OPTIONS] <path>...
   --classpath <cp>        classpath for type resolution of dependencies
@@ -161,18 +183,24 @@ codekoll [OPTIONS] <path>...
   --fail-on error|warning|never   exit-code threshold (default error)
   --rules <ids>           comma list; only run these rules
   --packs <names>         comma list; only run these packs
-  --rule-path <jars>      extra module path entries scanned for third-party rule packs
+  --rule-path <jars>      extra module path entries scanned for third-party rule packs  [NOT IMPLEMENTED]
   --explain <id>          print a rule's explanation, fix, and example, then exit
   --config <file>         explicit config path
 ```
 
 Exit codes: `0` clean / below threshold, `1` findings at/above threshold, `2` usage or internal error.
 
+This section predates the workstream in [docs/CLI-SPEC.md](docs/CLI-SPEC.md), which is the
+authority for the CLI surface and lists the rest of it: workspace flags (`--repo`, `--include`,
+`--exclude`, `--no-tests`, `--no-gitignore`, `--absolute-paths`, `--print-workspace`),
+`--print-config`, `--resolve`, `--verbose`, and `--catalog`. `--rule-path` remains the one flag
+here that the code does not have.
+
 ---
 
 ## 4. Rule Packs — Overview
 
-Rules are grouped into ten packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
+Rules are grouped into eleven packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
 
 | Pack | Focus | Rules |
 |---|---|---|
@@ -186,7 +214,15 @@ Rules are grouped into ten packs. The nine **founding rules** (from the original
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
-| **Total** | | **114** |
+| `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
+| **Total** | | **117** |
+
+**Implementation status (2026-09-17): 113 of these 117 are implemented.** The table above
+is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
+reports `correctness` 26 and `concurrency` 12. The four specified-but-unbuilt rules are
+`CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
+`CK-PARALLEL-MUTATION` (`concurrency`); none has an implementation, fixtures or an example class.
+See the status section at the top of [PLAN.md](PLAN.md).
 
 ---
 
@@ -219,7 +255,7 @@ Listed in implementation order (easiest → hardest). "Needs types" = requires a
 
 ### 5.3 CK-CRYPTO-WEAK — Weak crypto algorithm
 - **Detect:** invocations of `MessageDigest.getInstance`, `Cipher.getInstance`, `Mac.getInstance`, `KeyGenerator.getInstance`, `SecretKeyFactory.getInstance` where argument 0 is a **string literal** (or a constant-folded `static final String`, via the attributed tree's constant value).
-- **Blocklist (case-insensitive, matched on the algorithm segment before any `/` transformation suffix):** `MD2`, `MD5`, `SHA-1`, `SHA1`, `DES`, `DESede` (flag as INFO), `RC2`, `RC4`, `ARCFOUR`, `Blowfish`. Also flag `Cipher` transformations using `ECB` mode or `NoPadding` with block ciphers (INFO level).
+- **Blocklist (case-insensitive, matched on the algorithm segment before any `/` transformation suffix):** `MD2`, `MD5`, `SHA-1`, `SHA1`, `DES`, `DESede` (flag as INFO), `RC2`, `RC4`, `ARCFOUR`, `Blowfish`. Also flag `Cipher` transformations using `ECB` mode or `NoPadding` with block ciphers (INFO level). *(Exempt asymmetric ciphers, whose transformations the JCA spells `RSA/ECB/<padding>`: there ECB means "one block", not the mode. Flagging `RSA/ECB/OAEPWithSHA-256AndMGF1Padding`, the standard way to request OAEP, reported an error and failed default builds.)*
 - **Non-literal argument:** not flagged (v1) — no interprocedural constant propagation.
 - **Message:** "MD5 is cryptographically broken (collision attacks). Use SHA-256 or stronger."
 
@@ -453,6 +489,34 @@ Scope note: these rules match annotations by qualified name where the framework 
 | `CK-SLF4J-PLACEHOLDER` | E | SLF4J/Log4j2 logging call with a **constant** format string: count `{}` placeholders vs arguments, honoring the trailing-`Throwable` convention — a mismatch silently truncates the message or drops arguments. (Reuses the CK-FORMAT-MISMATCH parsing machinery.) |
 | `CK-LOG-EXCEPTION-LOST` | W | In a `catch` block, a logging call that includes the caught exception only via string concatenation or `e.getMessage()` — the **stack trace is lost**; `getMessage()` is frequently null. Pass the exception as the final argument: `log.error("Payment failed for {}", orderId, e);`. |
 
+### 6.11 Pack `pqc`
+
+Asymmetric algorithms that a large quantum computer breaks with Shor's algorithm. The code is
+classically sound, so the pack warns and no rule defaults to ERROR: at the default
+`--fail-on error` it cannot fail a build. Names are classified by `pqc-catalog.tsv`, generated
+from the JDK provider registry (names, aliases, OIDs) plus TLS named groups, TLS signature schemes
+and XML DSig `SignatureMethod` URIs; `PqcCatalogCompletenessTest` fails the build when the running
+JDK exposes a name the catalog does not classify. Guidance names ML-KEM (FIPS 203) and ML-DSA
+(FIPS 204) as built into the target platform when the analyzed release's `NamedParameterSpec`
+has the constants JDK 24 added, and Bouncy Castle PQC otherwise. The pack never rewrites code.
+Design record: `specs/001-pqc-migration-scanner/`.
+
+| ID | Sev | Detection |
+|---|---|---|
+| `CK-PQC-KEY-EXCHANGE` | W | Constant names at `KeyAgreement.getInstance` (DiffieHellman, ECDH, XDH, X25519, X448, with aliases and OIDs), `KEM.getInstance("DHKEM")`, `Cipher.getInstance` of RSA in any transformation or HPKE; `SSLParameters.setNamedGroups`; `SSLParameters.setCipherSuites` and `SSLSocket`/`SSLServerSocket`/`SSLEngine.setEnabledCipherSuites` naming a TLS 1.2 suite with RSA, DH(E) or ECDH(E) key exchange; `System`/`Security.setProperty` for `jdk.tls.namedGroups`, `jdk.tls.client.cipherSuites`, `jdk.tls.server.cipherSuites` and `https.cipherSuites` (names verified against the JDK 26 implementation classes). One finding per call, listing the vulnerable names. *(Exempt: ML-KEM names; symmetric and password-based ciphers; TLS 1.3 suites; non-constant names; a `KeyAgreement` or `KEM` request in a method that also requests ML-KEM, which is the hybrid transition; sources under `src/test`, `src/tests`, `src/testFixtures`, `src/integrationTest`, `src/it`.)* |
+| `CK-PQC-SIGNATURE` | W | Constant names at `Signature.getInstance` (every RSA, RSASSA-PSS, DSA, ECDSA and EdDSA variant, aliases such as `DSS`, `RawDSA`, `PSS`, and OIDs); `SSLParameters.setSignatureSchemes`; the `jdk.tls.client.SignatureSchemes` and `jdk.tls.server.SignatureSchemes` properties; `XMLSignatureFactory.newSignatureMethod` with an RSA, RSA-PSS, DSA, ECDSA or EdDSA `SignatureMethod` constant or URI. *(Exempt: ML-DSA, SLH-DSA, HSS/LMS; HMAC signature methods; non-constant names; test sources.)* |
+| `CK-PQC-KEY-MATERIAL` | I | Constant names at `KeyPairGenerator`/`KeyFactory`/`AlgorithmParameters`/`AlgorithmParameterGenerator.getInstance` for the RSA, RSASSA-PSS, EC, DSA, DiffieHellman, XDH and EdDSA families; `new ECGenParameterSpec`, `ECParameterSpec`, `RSAKeyGenParameterSpec`, `DSAParameterSpec`, `DHParameterSpec`, `DHGenParameterSpec`; `new NamedParameterSpec("X25519")` and the `NamedParameterSpec.X25519`/`X448`/`ED25519`/`ED448` constants. The message names the role the family implies. *(Exempt: post-quantum names; OAEP, GCM and other symmetric parameters; a parameter specification in a method that already reports a key-material request; test sources.)* |
+
+Scope: names the JDK defines, plus classical families only a third-party provider registers,
+matched by token because those providers spell each family many ways (ECIES, ECMQV, ECCDH, ECDHC,
+PLAIN-ECDSA, SM2, GOST3410, ECGOST3410, ElGamal; verified against Bouncy Castle 1.83). Their
+post-quantum spellings, including composites that pair one with a classical algorithm, classify as
+safe. The completeness test covers the JDK's providers only, since codekoll has no third-party
+provider on its test classpath. JOSE/JWT algorithm constants (`RS256`, `ES256`, `EdDSA`, `RSA-OAEP-256`,
+`ECDH-ES+A128KW`, and the symmetric ones as exemptions) are matched by simple name on the
+library types that hold them, the way the frameworks pack matches annotations.
+`HPKEParameterSpec` (JDK 26 only) is not covered yet.
+
 ---
 
 ## 7. Reporting
@@ -492,7 +556,7 @@ Every rule ships with an explicit false-positive budget: **a rule that cries wol
 - **Integration tests:** run the full CLI against a small sample project; snapshot-assert the SARIF output.
 - **Example verification:** the `codekoll-examples` module (see PLAN.md) proves every registered rule fires on realistic, documented example code and stays silent on the corrected variant — a registry-completeness test makes shipping a rule without an example impossible, and a metadata test rejects any rule with an empty `explanation()` or `fix()`.
 - **Self-hosting smoke test:** codekoll runs on its own source in CI with `--fail-on error`.
-- **Load tests:** the `codekoll-load-test` module measures CPU time and peak heap over checked-in and deterministically generated corpora; a quick profile runs on every CI build and fails on regression against a committed baseline (see §10 and PLAN Milestone 9).
+- **Load tests:** the `codekoll-load-test` module measures CPU time and retained heap (used heap after a forced GC, lowest reading of the iterations) in a forked JVM over checked-in and deterministically generated corpora; a quick profile runs on every CI build and fails on regression against a committed baseline (see §10 and PLAN Milestone 9).
 - **Corpus regression (post-v1):** run against 2–3 large OSS codebases, review every finding manually once, then pin the count.
 
 ## 10. Performance Targets

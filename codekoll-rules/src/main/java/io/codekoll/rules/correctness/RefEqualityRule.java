@@ -2,8 +2,12 @@ package io.codekoll.rules.correctness;
 
 import com.sun.source.tree.BinaryTree;
 import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.MemberSelectTree;
+import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.TypeCastTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import io.codekoll.api.RuleId;
@@ -18,8 +22,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * CK-REF-EQUALITY: {@code ==}/{@code !=} on String or boxed types compares references, not
  * contents. Exemptions: comparison with the {@code null} literal, comparison with a primitive
- * operand (unboxing makes it a value comparison), and the {@code this == obj} identity
- * fast-path inside an {@code equals} implementation.
+ * operand (unboxing makes it a value comparison), the {@code this == obj} identity
+ * fast-path inside an {@code equals} implementation, and the {@code s == s.intern()} idiom,
+ * which is the only way to ask whether a string is interned and is therefore deliberate
+ * identity comparison.
  */
 public final class RefEqualityRule extends AbstractRule {
 
@@ -71,7 +77,8 @@ public final class RefEqualityRule extends AbstractRule {
         if ((node.getKind() == Tree.Kind.EQUAL_TO || node.getKind() == Tree.Kind.NOT_EQUAL_TO)
             && !isNullLiteral(node.getLeftOperand())
             && !isNullLiteral(node.getRightOperand())
-            && !isThisIdentityFastPath(node)) {
+            && !isThisIdentityFastPath(node)
+            && !isInternIdentityIdiom(node)) {
           TypeMirror left = ctx.typeOf(new TreePath(getCurrentPath(), node.getLeftOperand()));
           TypeMirror right = ctx.typeOf(new TreePath(getCurrentPath(), node.getRightOperand()));
           if (isFlagged(left, right, ctx) || isFlagged(right, left, ctx)) {
@@ -89,6 +96,40 @@ public final class RefEqualityRule extends AbstractRule {
         }
         String name = ctx.qualifiedNameOf(candidate);
         return "java.lang.String".equals(name) || BOXED.contains(name);
+      }
+
+      /**
+       * {@code s == s.intern()} (in either operand order, through casts and parentheses) asks
+       * whether the string is the interned instance. Comparing with equals() would answer a
+       * different question and always be true, so identity is the point, not a mistake.
+       */
+      private boolean isInternIdentityIdiom(BinaryTree node) {
+        return isInternOf(node.getRightOperand(), node.getLeftOperand())
+            || isInternOf(node.getLeftOperand(), node.getRightOperand());
+      }
+
+      private boolean isInternOf(ExpressionTree candidate, ExpressionTree other) {
+        if (!(unwrap(candidate) instanceof MethodInvocationTree call)
+            || !call.getArguments().isEmpty()
+            || !(call.getMethodSelect() instanceof MemberSelectTree select)
+            || !select.getIdentifier().contentEquals("intern")) {
+          return false;
+        }
+        return unwrap(select.getExpression()).toString().equals(unwrap(other).toString());
+      }
+
+      /** Strip parentheses and casts so {@code ((String) obj).intern()} still matches {@code obj}. */
+      private ExpressionTree unwrap(ExpressionTree expr) {
+        ExpressionTree current = expr;
+        while (true) {
+          if (current instanceof ParenthesizedTree paren) {
+            current = paren.getExpression();
+          } else if (current instanceof TypeCastTree cast) {
+            current = cast.getExpression();
+          } else {
+            return current;
+          }
+        }
       }
 
       private boolean isThisIdentityFastPath(BinaryTree node) {

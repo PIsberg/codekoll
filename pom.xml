@@ -17,6 +17,7 @@
     <module>codekoll-engine</module>
     <module>codekoll-rules</module>
     <module>codekoll-report</module>
+    <module>codekoll-workspace</module>
     <module>codekoll-cli</module>
     <module>codekoll-examples</module>
     <module>codekoll-load-test</module>
@@ -26,9 +27,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
 
-    <junit.version>5.12.2</junit.version>
-    <archunit.version>1.4.1</archunit.version>
-    <jspecify.version>1.0.0</jspecify.version>
+    <junit.version>6.1.3</junit.version>
+    <archunit.version>1.5.0</archunit.version>
+    <jspecify.version>1.0.1</jspecify.version>
     <picocli.version>4.7.7</picocli.version>
 
     <errorprone.version>2.41.0</errorprone.version>
@@ -86,12 +87,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.0</version>
+          <version>3.16.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.6.0</version>
           <configuration>
             <useModulePath>false</useModulePath>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
@@ -100,7 +101,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -110,7 +111,7 @@
             <dependency>
               <groupId>com.puppycrawl.tools</groupId>
               <artifactId>checkstyle</artifactId>
-              <version>13.8.0</version>
+              <version>14.1.0</version>
             </dependency>
           </dependencies>
           <configuration>
@@ -128,12 +129,12 @@
             <dependency>
               <groupId>net.sourceforge.pmd</groupId>
               <artifactId>pmd-core</artifactId>
-              <version>7.26.0</version>
+              <version>7.27.0</version>
             </dependency>
             <dependency>
               <groupId>net.sourceforge.pmd</groupId>
               <artifactId>pmd-java</artifactId>
-              <version>7.26.0</version>
+              <version>7.27.0</version>
             </dependency>
           </dependencies>
           <configuration>
@@ -148,7 +149,7 @@
         <plugin>
           <groupId>com.github.spotbugs</groupId>
           <artifactId>spotbugs-maven-plugin</artifactId>
-          <version>4.10.3.0</version>
+          <version>4.10.4.1</version>
           <configuration>
             <effort>Max</effort>
             <threshold>Low</threshold>
@@ -166,7 +167,7 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.13</version>
+          <version>0.8.15</version>
         </plugin>
       </plugins>
     </pluginManagement>

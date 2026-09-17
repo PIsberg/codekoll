@@ -1,6 +1,7 @@
 package io.codekoll.report;
 
 import io.codekoll.api.Finding;
+import io.codekoll.api.Rule;
 import io.codekoll.api.Severity;
 import java.io.PrintWriter;
 import java.util.LinkedHashMap;
@@ -17,6 +18,36 @@ public final class SarifReporter implements Reporter {
   private static final String SCHEMA =
       "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/"
           + "sarif-schema-2.1.0.json";
+
+  private final PathRenderer paths;
+  private final Map<String, Rule> rules;
+
+  /** Reports absolute paths, with no rule metadata. */
+  public SarifReporter() {
+    this(PathRenderer.absolute());
+  }
+
+  /**
+   * @param paths how file paths are rendered; repo-relative in a normal CLI run, which is what
+   *     GitHub code scanning needs to annotate a pull request
+   */
+  public SarifReporter(PathRenderer paths) {
+    this(paths, List.of());
+  }
+
+  /**
+   * @param paths how file paths are rendered
+   * @param rules the loaded rules, whose metadata fills each descriptor (SPEC section 7):
+   *     {@code description()} to {@code shortDescription}, {@code explanation()} to
+   *     {@code fullDescription}, {@code fix()} to {@code help}, and the pack as the only tag,
+   *     so code scanning can filter by pack. An unknown rule id still gets a minimal descriptor.
+   */
+  public SarifReporter(PathRenderer paths, List<Rule> rules) {
+    this.paths = paths;
+    Map<String, Rule> byId = new LinkedHashMap<>();
+    rules.forEach(rule -> byId.put(rule.id().value(), rule));
+    this.rules = Map.copyOf(byId);
+  }
 
   @Override
   public void report(List<Finding> findings, PrintWriter out) {
@@ -36,10 +67,21 @@ public final class SarifReporter implements Reporter {
     List<Finding> exemplars = List.copyOf(ruleExemplar.values());
     for (int i = 0; i < exemplars.size(); i++) {
       Finding f = exemplars.get(i);
-      out.printf("        {\"id\": \"%s\", \"defaultConfiguration\": "
-              + "{\"level\": \"%s\"}}%s%n",
-          f.rule().value(), sarifLevel(f.severity()),
-          i < exemplars.size() - 1 ? "," : "");
+      String comma = i < exemplars.size() - 1 ? "," : "";
+      Rule rule = rules.get(f.rule().value());
+      if (rule == null) {
+        out.printf("        {\"id\": \"%s\", \"defaultConfiguration\": "
+                + "{\"level\": \"%s\"}}%s%n",
+            f.rule().value(), sarifLevel(f.severity()), comma);
+      } else {
+        out.printf("        {\"id\": \"%s\", \"defaultConfiguration\": {\"level\": \"%s\"}, "
+                + "\"shortDescription\": {\"text\": \"%s\"}, "
+                + "\"fullDescription\": {\"text\": \"%s\"}, "
+                + "\"help\": {\"text\": \"%s\"}, "
+                + "\"properties\": {\"tags\": [\"%s\"]}}%s%n",
+            f.rule().value(), sarifLevel(f.severity()), escape(rule.description()),
+            escape(rule.explanation()), escape(rule.fix()), escape(rule.pack().id()), comma);
+      }
     }
     out.println("      ]");
     out.println("    }},");
@@ -72,8 +114,9 @@ public final class SarifReporter implements Reporter {
     };
   }
 
-  private static String uri(Finding f) {
-    return f.file().toString().replace('\\', '/');
+  /** SARIF URIs are always {@code /}-separated, whatever the OS the run happened on. */
+  private String uri(Finding f) {
+    return paths.render(f.file()).replace('\\', '/');
   }
 
   private static String escape(String s) {

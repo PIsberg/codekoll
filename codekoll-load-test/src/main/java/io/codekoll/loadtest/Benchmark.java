@@ -11,9 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Runs codekoll over a corpus with warm-up + measured iterations and reports the median
- * CPU time and peak heap. CPU time comes from {@link com.sun.management.OperatingSystemMXBean}
+ * Runs codekoll over a corpus with warm-up + measured iterations and reports the <em>fastest</em>
+ * CPU time and the peak heap. CPU time comes from {@link com.sun.management.OperatingSystemMXBean}
  * (process CPU), which is far less noisy than wall time on shared CI runners.
+ *
+ * <p>Minimum rather than median: contention, GC and JIT compilation only ever <em>add</em> to a
+ * measurement, so the fastest iteration is the one least contaminated by whatever else the runner
+ * was doing. A median still carries that noise into the number the gate compares.
  */
 final class Benchmark {
 
@@ -22,13 +26,14 @@ final class Benchmark {
   private final CompilationDriver driver = new CompilationDriver(25, "");
   private final List<Rule> rules = RuleRegistry.loadAll();
 
-  Measurement measure(String tier, List<Path> corpus, int sourceLines, int iterations) {
+  Measurement measure(String tier, List<Path> corpus, int sourceLines, int iterations,
+      long calibrationMillis, String env) {
     for (int i = 0; i < WARMUP; i++) {
       driver.analyzePaths(corpus, rules);
     }
     List<Long> wall = new ArrayList<>();
     List<Long> cpu = new ArrayList<>();
-    long peakHeap = 0;
+    List<Long> heap = new ArrayList<>();
     long findings = 0;
     for (int i = 0; i < iterations; i++) {
       long startCpu = processCpuNanos();
@@ -39,10 +44,10 @@ final class Benchmark {
       findings = result.findings().size();
       wall.add(wallNanos / 1_000_000);
       cpu.add(cpuNanos / 1_000_000);
-      peakHeap = Math.max(peakHeap, usedHeapAfterGc());
+      heap.add(usedHeapAfterGc());
     }
     return new Measurement(tier, sourceLines, findings,
-        median(wall), median(cpu), peakHeap);
+        fastest(wall), fastest(cpu), fastest(heap), calibrationMillis, env);
   }
 
   private static long processCpuNanos() {
@@ -55,15 +60,18 @@ final class Benchmark {
     return System.nanoTime();
   }
 
+  /**
+   * Retained heap after a forced GC, taken as the lowest of the iterations for the same reason CPU
+   * takes the fastest: the lowest reading is the one least polluted by a collection the JVM had not
+   * finished. Taking the highest made the gate swing 12 to 28 MB between identical runs.
+   */
   private static long usedHeapAfterGc() {
     System.gc();
     MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
     return memory.getHeapMemoryUsage().getUsed();
   }
 
-  private static long median(List<Long> values) {
-    List<Long> sorted = new ArrayList<>(values);
-    sorted.sort(Long::compareTo);
-    return sorted.get(sorted.size() / 2);
+  private static long fastest(List<Long> values) {
+    return values.stream().mapToLong(Long::longValue).min().orElse(0);
   }
 }

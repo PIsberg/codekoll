@@ -21,11 +21,19 @@ public final class RuleTestHarness {
 
   private static final String MARKER = "// ::";
 
+  /** The release fixtures compile at unless a test asks for another. */
+  private static final int DEFAULT_RELEASE = 25;
+
   private RuleTestHarness() {}
 
   /** Runs {@code rule} over the given source; throws AssertionError on marker mismatch. */
   public static void assertFixture(Rule rule, String className, String source) {
-    AnalysisResult result = run(rule, className, source);
+    assertFixture(rule, className, source, DEFAULT_RELEASE);
+  }
+
+  /** As {@link #assertFixture(Rule, String, String)}, compiling at {@code --release release}. */
+  public static void assertFixture(Rule rule, String className, String source, int release) {
+    AnalysisResult result = run(rule, className, source, release);
     if (!result.skippedFiles().isEmpty()) {
       throw new AssertionError("Fixture failed to compile: " + result.skippedFiles());
     }
@@ -44,7 +52,15 @@ public final class RuleTestHarness {
 
   /** Runs the rule and returns the raw result (for tests asserting messages etc.). */
   public static AnalysisResult run(Rule rule, String className, String source) {
-    CompilationDriver driver = new CompilationDriver(25, "");
+    return run(rule, className, source, DEFAULT_RELEASE);
+  }
+
+  /**
+   * As {@link #run(Rule, String, String)}, compiling at {@code --release release}, for rules whose
+   * behaviour depends on the analyzed project's target platform API.
+   */
+  public static AnalysisResult run(Rule rule, String className, String source, int release) {
+    CompilationDriver driver = new CompilationDriver(release, "");
     return driver.analyzeFileObjects(List.of(new StringSource(className, source)), List.of(rule));
   }
 

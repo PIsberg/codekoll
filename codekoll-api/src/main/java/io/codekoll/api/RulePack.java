@@ -13,7 +13,8 @@ public enum RulePack {
   API_MISUSE,
   NULLNESS,
   MODERN,
-  FRAMEWORKS;
+  FRAMEWORKS,
+  PQC;
 
   /** Config/CLI name, e.g. {@code api-misuse}. */
   public String id() {
