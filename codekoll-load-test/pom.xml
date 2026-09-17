@@ -23,7 +23,7 @@
     <loadtest.cpu.maxRegression>0.15</loadtest.cpu.maxRegression>
     <loadtest.heap.maxRegression>0.20</loadtest.heap.maxRegression>
     <!-- Opt-in baseline recording; forwarded to the forked JVM, which inherits no -D flags. -->
-    <codekoll.loadtest.record>true</codekoll.loadtest.record>
+    <codekoll.loadtest.record>false</codekoll.loadtest.record>
   </properties>
 
   <dependencies>
