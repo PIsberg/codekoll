@@ -40,8 +40,39 @@ final class PqcCatalog {
   private static final List<String> NOT_ASYMMETRIC_PREFIXES = List.of("AES", "ARCFOUR", "BLOWFISH",
       "CHACHA20", "DES", "GCM", "OAEP", "PBE", "RC2", "RC4", "TRIPLEDES");
 
-  private static final Map<String, Family> POST_QUANTUM_PREFIXES = Map.of("ML-KEM", Family.ML_KEM,
-      "ML-DSA", Family.ML_DSA, "SLH-DSA", Family.SLH_DSA, "HSS/LMS", Family.HSS_LMS);
+  private static final Map<String, Family> POST_QUANTUM_PREFIXES = Map.ofEntries(
+      Map.entry("ML-KEM", Family.ML_KEM),
+      Map.entry("ML-DSA", Family.ML_DSA),
+      Map.entry("SLH-DSA", Family.SLH_DSA),
+      Map.entry("HSS/LMS", Family.HSS_LMS),
+      // Spellings third-party providers use, including composites that pair a post-quantum
+      // algorithm with a classical one: that pairing is the recommended hybrid, not a finding.
+      Map.entry("MLKEM", Family.ML_KEM),
+      Map.entry("MLDSA", Family.ML_DSA),
+      Map.entry("SLHDSA", Family.SLH_DSA),
+      Map.entry("KYBER", Family.ML_KEM),
+      Map.entry("DILITHIUM", Family.ML_DSA),
+      Map.entry("FALCON", Family.SLH_DSA),
+      Map.entry("SPHINCS", Family.SLH_DSA),
+      Map.entry("XMSS", Family.HSS_LMS),
+      Map.entry("LMS", Family.HSS_LMS));
+
+  /**
+   * Families only a third-party provider registers, matched by prefix: Bouncy Castle 1.83 has 13
+   * ECIES spellings and 20 SM2 ones, so listing each name would age badly. Verified against that
+   * provider's registry. Anything not listed here stays unclassified and is never reported.
+   */
+  private static final List<Map.Entry<String, Family>> PROVIDER_TOKENS = List.of(
+      Map.entry("ECIES", Family.EC),
+      Map.entry("ECMQV", Family.EC),
+      Map.entry("ECCDH", Family.EC),
+      Map.entry("ECDHC", Family.EC),
+      Map.entry("PLAIN-ECDSA", Family.EC),
+      Map.entry("SM2", Family.EC),
+      // Before GOST3410: the elliptic-curve variant contains the other name.
+      Map.entry("ECGOST3410", Family.EC),
+      Map.entry("GOST3410", Family.DSA),
+      Map.entry("ELGAMAL", Family.DH));
 
   private static final Map<String, Family> SUITE_KEY_EXCHANGE = Map.of("RSA", Family.RSA,
       "DH", Family.DH, "DHE", Family.DH, "ECDH", Family.EC, "ECDHE", Family.EC);
@@ -66,6 +97,11 @@ final class PqcCatalog {
           return Optional.of(new PostQuantum(prefix.getValue()));
         }
       }
+      for (Map.Entry<String, Family> token : PROVIDER_TOKENS) {
+        if (key.contains(token.getKey())) {
+          return Optional.of(providerEntry(type, token.getValue(), name.trim()));
+        }
+      }
       for (String prefix : NOT_ASYMMETRIC_PREFIXES) {
         if (key.startsWith(prefix)) {
           return Optional.of(new NotAsymmetric());
@@ -83,6 +119,16 @@ final class PqcCatalog {
   /** Splits a comma-separated property value such as {@code jdk.tls.namedGroups}. */
   static List<String> splitList(String value) {
     return Arrays.stream(value.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+  }
+
+  /** Role follows the request type, as it does for the JDK's own names. */
+  private static Vulnerable providerEntry(RequestType type, Family family, String name) {
+    Role role = switch (type) {
+      case SIGNATURE -> Role.SIGNATURE;
+      case KEY_AGREEMENT, KEM, CIPHER -> Role.KEY_ESTABLISHMENT;
+      default -> family == Family.DSA ? Role.SIGNATURE : Role.KEY_MATERIAL;
+    };
+    return new Vulnerable(family, role, name);
   }
 
   private static String key(RequestType type, String name) {

@@ -507,8 +507,13 @@ Design record: `specs/001-pqc-migration-scanner/`.
 | `CK-PQC-SIGNATURE` | W | Constant names at `Signature.getInstance` (every RSA, RSASSA-PSS, DSA, ECDSA and EdDSA variant, aliases such as `DSS`, `RawDSA`, `PSS`, and OIDs); `SSLParameters.setSignatureSchemes`; the `jdk.tls.client.SignatureSchemes` and `jdk.tls.server.SignatureSchemes` properties; `XMLSignatureFactory.newSignatureMethod` with an RSA, RSA-PSS, DSA, ECDSA or EdDSA `SignatureMethod` constant or URI. *(Exempt: ML-DSA, SLH-DSA, HSS/LMS; HMAC signature methods; non-constant names; test sources.)* |
 | `CK-PQC-KEY-MATERIAL` | I | Constant names at `KeyPairGenerator`/`KeyFactory`/`AlgorithmParameters`/`AlgorithmParameterGenerator.getInstance` for the RSA, RSASSA-PSS, EC, DSA, DiffieHellman, XDH and EdDSA families; `new ECGenParameterSpec`, `ECParameterSpec`, `RSAKeyGenParameterSpec`, `DSAParameterSpec`, `DHParameterSpec`, `DHGenParameterSpec`; `new NamedParameterSpec("X25519")` and the `NamedParameterSpec.X25519`/`X448`/`ED25519`/`ED448` constants. The message names the role the family implies. *(Exempt: post-quantum names; OAEP, GCM and other symmetric parameters; a parameter specification in a method that already reports a key-material request; test sources.)* |
 
-Scope: names the JDK defines. Bouncy Castle-only names, JOSE/JWT libraries and
-`HPKEParameterSpec` (JDK 26 only) are not covered yet.
+Scope: names the JDK defines, plus classical families only a third-party provider registers,
+matched by token because those providers spell each family many ways (ECIES, ECMQV, ECCDH, ECDHC,
+PLAIN-ECDSA, SM2, GOST3410, ECGOST3410, ElGamal; verified against Bouncy Castle 1.83). Their
+post-quantum spellings, including composites that pair one with a classical algorithm, classify as
+safe. The completeness test covers the JDK's providers only, since codekoll has no third-party
+provider on its test classpath. JOSE/JWT libraries and `HPKEParameterSpec` (JDK 26 only) are not
+covered yet.
 
 ---
 
