@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 117 rules.
+Generated from rule metadata — 119 rules.
 
 ## correctness (26)
 
@@ -46,14 +46,16 @@ Generated from rule metadata — 117 rules.
 | `CK-OCTAL-LITERAL` | WARNING | Integer literal with a leading zero is octal, not decimal |
 | `CK-SHIFT-OOB` | ERROR | Shift distance >= width of the shifted type |
 
-## concurrency (12)
+## concurrency (14)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-ATOMIC-READ-MODIFY-WRITE` | WARNING | Atomic updated by set(get() ...) — a two-step read-modify-write, not an atomic one |
+| `CK-CANCEL-SWALLOWED` | WARNING | Cancellation or interrupt swallowed by a broad catch or a future fallback |
 | `CK-CONCURRENT-MOD` | ERROR | Collection modified while iterating it with for-each |
 | `CK-CTOR-THREAD-START` | WARNING | Thread started from inside a constructor |
 | `CK-DCL-NO-VOLATILE` | WARNING | Double-checked locking on a non-volatile field |
+| `CK-INTERRUPT-NOT-RESTORED` | WARNING | InterruptedException caught without restoring the interrupt status |
 | `CK-LOCK-NO-FINALLY` | WARNING | Lock.lock() without try/finally unlock |
 | `CK-MONITOR-ON-LOCK` | ERROR | synchronized on a java.util.concurrent Lock object |
 | `CK-SLEEP-IN-SYNC` | INFO | Thread.sleep while holding a monitor |

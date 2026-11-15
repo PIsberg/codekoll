@@ -206,7 +206,7 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 |---|---|---|
 | `correctness` | Logic that is provably or almost-certainly wrong | 28 |
 | `numeric` | Arithmetic and overflow traps | 8 |
-| `concurrency` | Threading and synchronization | 14 |
+| `concurrency` | Threading and synchronization | 16 |
 | `resources` | Leaks, exception handling, cleanup | 9 |
 | `security` | Weak crypto, injection, secrets, TLS, ReDoS | 11 |
 | `performance` | Accidentally-quadratic and allocation churn | 6 |
@@ -216,11 +216,11 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
 | `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
 | `dead-code` | Code that can never run or is never used (§6.12) | 4 |
-| **Total** | | **121** |
+| **Total** | | **123** |
 
-**Implementation status (2026-09-17): 117 of these 121 are implemented.** The table above
+**Implementation status (2026-11-15): 119 of these 123 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
-reports `correctness` 26 and `concurrency` 12. The four specified-but-unbuilt rules are
+reports `correctness` 26 and `concurrency` 14. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
 `CK-PARALLEL-MUTATION` (`concurrency`); none has an implementation, fixtures or an example class.
 See the status section at the top of [PLAN.md](PLAN.md).
@@ -382,6 +382,8 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local, exc
 | `CK-CONCURRENT-MOD` | E | Inside an enhanced-`for` iterating collection `c`: a call to `c.add/remove/clear/put` on the **same symbol** `c` — guaranteed `ConcurrentModificationException` (or silent corruption). Suggest `Iterator.remove` or `removeIf`. |
 | `CK-PARALLEL-MUTATION` | E | A lambda passed to `forEach`/`map`/`filter` on a stream made parallel in the same expression chain (`.parallelStream()`, `.parallel()`) that mutates a **captured non-concurrent collection** (`ArrayList.add`, `HashMap.put`, `StringBuilder.append`) — data race: silent corruption, lost elements, or `ArrayIndexOutOfBoundsException` under load. Use `collect(...)`/`Collectors.toConcurrentMap`, or drop `parallel()`. |
 | `CK-FUTURE-DISCARDED` | W | An `ExpressionStatementTree` whose value is a `CompletableFuture`/`Future` returned by a method call — the future (and **any exception inside it**) is silently dropped; async failures vanish without a trace. Keep the future and handle it (`join`, `exceptionally`, collect for `allOf`). *(`void`-lambda `thenAccept`-style tails exempt — the chain itself was the handling.)* |
+| `CK-INTERRUPT-NOT-RESTORED` | W | A `catch` clause whose types include `InterruptedException` and whose block neither calls `interrupt()` (the `Thread.currentThread().interrupt()` idiom) nor rethrows the caught variable nor throws a new `InterruptedException` — catching it clears the thread's interrupt status, so logging or wrapping it (`throw new RuntimeException(e)`) leaves every caller up the stack unable to see that the thread was asked to stop: shutdowns hang and cancelled tasks keep running. *(Exempt at a thread entry point that ends right there: the catch is in `run()`, `main(String[])` or a `Runnable` lambda and the catch block ends with `return`, ends with `break` out of a loop that is the body's last statement, or belongs to a `try` that is the body's last statement — nobody is left to read the flag.)* |
+| `CK-CANCEL-SWALLOWED` | W | Cancellation that disappears: (a) `catch (Exception)` or `catch (Throwable)` around a call that declares `throws InterruptedException` (`StructuredTaskScope.join()`, `Future.get()`, `Thread.sleep`, `BlockingQueue.take`, …), resolved from the attributed method's `throws` clause, with no earlier `catch` for `InterruptedException`/`CancellationException` on the same `try` and a block that contains no `throw`, no `interrupt()` call and no `instanceof InterruptedException`/`CancellationException` test; (b) a lambda passed to `CompletionStage.exceptionally` or `handle` (and their `Async` forms) that never reads its throwable parameter — the failure, cancellation included, turns into an ordinary value. (`whenComplete` is not flagged: the stage it returns still completes exceptionally.) Structured-concurrency scopes and executors cancel by interrupting; a task that swallows the signal keeps running and `join()`/`close()`/`shutdown` waits for it. *(Exempt: calls inside a nested lambda or class body, which cannot throw into this `try`; the same thread-entry-point exemption as `CK-INTERRUPT-NOT-RESTORED`. A broad catch around `CompletableFuture.join()` is not flagged: the cancellation it swallows is another task's, not this thread's.)* |
 
 ### 6.4 Pack `resources`
 
