@@ -5,6 +5,7 @@ import io.codekoll.api.Rule;
 import io.codekoll.api.RulePack;
 import io.codekoll.api.Severity;
 import io.codekoll.engine.AnalysisResult;
+import io.codekoll.engine.Attribution;
 import io.codekoll.engine.CompilationDriver;
 import io.codekoll.engine.RuleRegistry;
 import io.codekoll.report.ConsoleReporter;
@@ -211,7 +212,8 @@ public final class Main implements Callable<Integer> {
       // Nothing to analyze is a fact worth stating: silence here reads as "clean".
       out.println("No Java sources found under " + workspace.repoRoot()
           + ". Run with --print-workspace to see what discovery decided.");
-      reportDiagnostics(workspace, new AnalysisResult(List.of(), Map.of(), List.of()));
+      reportDiagnostics(workspace,
+          new AnalysisResult(List.of(), Map.of(), List.of(), Attribution.empty()));
       return 0;
     }
 
@@ -220,6 +222,7 @@ public final class Main implements Callable<Integer> {
     reportDiagnostics(workspace, result);
     configDiagnostics.forEach(this::warn);
     settings.notes().forEach(this::warn);
+    reportAttribution(result.attribution());
     return exitCode(result, settings);
   }
 
@@ -243,7 +246,8 @@ public final class Main implements Callable<Integer> {
                   f.snippet());
         })
         .toList();
-    return new AnalysisResult(restamped, result.skippedFiles(), result.ruleFailures());
+    return new AnalysisResult(restamped, result.skippedFiles(), result.ruleFailures(),
+        result.attribution());
   }
 
   /**
@@ -338,13 +342,14 @@ public final class Main implements Callable<Integer> {
    *
    * <p>One {@code javac} invocation per unit, not one for the whole repository: a multi-module
    * repo has modules at different releases and with different dependencies, and compiling them
-   * together attributes neither correctly. Batching within a unit, the run timeout and the
-   * attribution accounting of CLI-SPEC §5–§6 are still to come.
+   * together attributes neither correctly. Batching within a unit and the run timeout of
+   * CLI-SPEC §5 are still to come.
    */
   private AnalysisResult analyze(Workspace workspace, List<Rule> rules) {
     List<Finding> findings = new ArrayList<>();
     Map<Path, String> skipped = new LinkedHashMap<>();
     List<String> ruleFailures = new ArrayList<>();
+    Attribution attribution = Attribution.empty();
     for (SourceUnit unit : workspace.units()) {
       AnalysisResult unitResult =
           new CompilationDriver(unit.release(), unit.classpathString())
@@ -352,36 +357,59 @@ public final class Main implements Callable<Integer> {
       findings.addAll(unitResult.findings());
       skipped.putAll(unitResult.skippedFiles());
       ruleFailures.addAll(unitResult.ruleFailures());
+      attribution = attribution.plus(unitResult.attribution());
     }
     // Sorted once at the end: output order must not depend on how discovery split the repo.
     findings.sort(Comparator.comparing((Finding f) -> f.file().toString())
         .thenComparingLong(Finding::line)
         .thenComparingLong(Finding::column)
         .thenComparing(f -> f.rule().value()));
-    return new AnalysisResult(findings, skipped, ruleFailures);
+    return new AnalysisResult(findings, skipped, ruleFailures, attribution);
   }
 
   /**
    * Diagnostics go to stderr, never to the reporter's stream. With {@code --output} that stream
    * carries a machine-readable payload, and trailing prose after the closing bracket makes the
    * JSON unparseable and the SARIF unusable for GitHub code scanning. Stderr keeps them visible
-   * in a terminal (the "fail toward visible" rule) without corrupting the artifact.
+   * in a terminal (the "fail toward visible" rule) without corrupting the artifact. Written through
+   * picocli's error writer, which is {@code System.err} unless a caller redirects it.
    */
-  @SuppressWarnings("PMD.SystemPrintln")
+  // picocli owns this writer and it wraps System.err; closing it would close the process's
+  // stderr for everything printed after it. Flushed, deliberately never closed.
+  @SuppressWarnings("PMD.CloseResource")
   private void reportDiagnostics(Workspace workspace, AnalysisResult result) {
+    PrintWriter err = spec.commandLine().getErr();
     if (verbose) {
-      System.err.println("repo root: " + workspace.repoRoot()
+      err.println("repo root: " + workspace.repoRoot()
           + " (" + workspace.buildSystem().label() + ", " + workspace.units().size()
           + " unit(s), " + workspace.fileCount() + " file(s))");
     }
     for (String diagnostic : workspace.diagnostics()) {
-      System.err.println("workspace: " + diagnostic);
+      err.println("workspace: " + diagnostic);
     }
-    for (Map.Entry<Path, String> skip : result.skippedFiles().entrySet()) {
-      System.err.println("skipped (does not compile): " + workspace.relativize(skip.getKey())
-          + " — " + skip.getValue());
+    // One line per skipped file only on request: on a repository with missing dependencies
+    // there can be hundreds, and the attribution footer already says how many and why.
+    if (verbose) {
+      for (Map.Entry<Path, String> skip : result.skippedFiles().entrySet()) {
+        err.println("skipped (does not compile): " + workspace.relativize(skip.getKey())
+            + " — " + skip.getValue());
+      }
     }
-    result.ruleFailures().forEach(f -> System.err.println("internal rule failure: " + f));
+    result.ruleFailures().forEach(f -> err.println("internal rule failure: " + f));
+    err.flush();
+  }
+
+  /**
+   * Ends the run with the attribution footer when some files could not be type-checked. Last, so
+   * that it is the part of the output that gets read; on stderr, like every diagnostic, so that
+   * it never lands inside a JSON or SARIF report written to stdout.
+   */
+  // Same writer as reportDiagnostics: picocli's, wrapping System.err. Flushed, never closed.
+  @SuppressWarnings("PMD.CloseResource")
+  private void reportAttribution(Attribution attribution) {
+    PrintWriter err = spec.commandLine().getErr();
+    AttributionFooter.lines(attribution).forEach(err::println);
+    err.flush();
   }
 
   /**

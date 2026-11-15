@@ -15,10 +15,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -34,8 +36,9 @@ import javax.tools.ToolProvider;
  * Runs the system {@code javac} over source files up to the {@code analyze} phase (fully
  * attributed trees) and dispatches every enabled rule over each compilation unit.
  *
- * <p>Files that fail attribution are reported as skipped, not analyzed. A rule that throws is
- * recorded as a rule failure and analysis continues.
+ * <p>Files that fail attribution are reported as skipped, not analyzed, and counted in the result's
+ * {@link Attribution} together with the packages and classes their errors name. A rule that
+ * throws is recorded as a rule failure and analysis continues.
  */
 public final class CompilationDriver {
 
@@ -133,7 +136,7 @@ public final class CompilationDriver {
       List<? extends JavaFileObject> files, List<Rule> rules,
       java.util.function.Function<Path, SourceKind> sourceKinds) throws IOException {
     if (files.isEmpty()) {
-      return new AnalysisResult(List.of(), Map.of(), List.of());
+      return new AnalysisResult(List.of(), Map.of(), List.of(), Attribution.empty());
     }
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
     JavacTask task = (JavacTask) compiler.getTask(
@@ -143,10 +146,15 @@ public final class CompilationDriver {
 
     Map<Path, String> skipped = new LinkedHashMap<>();
     Map<URI, String> errorsBySource = new HashMap<>();
+    Map<URI, Set<String>> unresolvedBySource = new HashMap<>();
     for (Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) {
       if (d.getKind() == Diagnostic.Kind.ERROR && d.getSource() != null) {
-        errorsBySource.putIfAbsent(d.getSource().toUri(),
-            d.getLineNumber() + ": " + d.getMessage(Locale.ROOT));
+        URI source = d.getSource().toUri();
+        errorsBySource.putIfAbsent(source, d.getLineNumber() + ": " + d.getMessage(Locale.ROOT));
+        String missing = UnresolvedNames.of(d);
+        if (missing != null) {
+          unresolvedBySource.computeIfAbsent(source, k -> new HashSet<>()).add(missing);
+        }
       }
     }
 
@@ -156,12 +164,19 @@ public final class CompilationDriver {
 
     List<Finding> findings = new ArrayList<>();
     List<String> ruleFailures = new ArrayList<>();
+    Map<String, Integer> unresolved = new HashMap<>();
+    int discovered = 0;
     for (CompilationUnitTree unit : units) {
+      discovered++;
       URI uri = unit.getSourceFile().toUri();
       Path path = pathOf(unit.getSourceFile());
       String error = errorsBySource.get(uri);
       if (error != null) {
         skipped.put(path, error);
+        // Counted per file, not per error: the footer's number is how many files a missing
+        // dependency cost, and one file importing three classes from it cost one.
+        unresolvedBySource.getOrDefault(uri, Set.of())
+            .forEach(name -> unresolved.merge(name, 1, Integer::sum));
         continue;
       }
       SuppressionFilter filter = SuppressionFilter.forUnit(unit);
@@ -175,7 +190,10 @@ public final class CompilationDriver {
         .thenComparingLong(Finding::line)
         .thenComparingLong(Finding::column)
         .thenComparing(f -> f.rule().value()));
-    return new AnalysisResult(List.copyOf(findings), skipped, List.copyOf(ruleFailures));
+    Attribution attribution =
+        new Attribution(discovered, discovered - skipped.size(), unresolved);
+    return new AnalysisResult(List.copyOf(findings), skipped, List.copyOf(ruleFailures),
+        attribution);
   }
 
   // Intentional broad catch: the engine's contract is that a crashing rule never aborts

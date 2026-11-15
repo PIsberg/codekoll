@@ -18,9 +18,10 @@ document. Where this document and SPEC.md disagree on CLI surface, this document
   repository with no edits to its build files. That claim is already in README §2; this spec is
   what makes it survive contact with a real repository.
 - **No silent under-reporting.** Today a missing dependency makes javac attribution fail, the
-  file is recorded as *skipped*, and every type-aware rule reports nothing for it. On a foreign
-  repo this is the dominant failure mode and it currently looks identical to "clean". Attribution
-  coverage becomes a first-class, gate-able output.
+  file is recorded as *skipped*, and no rule runs on it. On a foreign repo this is the dominant
+  failure mode, and until the §6 footer it looked identical to "clean". Attribution coverage
+  becomes a first-class, gate-able output (reported today; the gate, `--min-attribution`, is
+  still to come).
 - **Scale to a real repository.** Tens of thousands of files, multiple modules with *different*
   classpaths and *different* language levels, in bounded memory.
 - **Adoptable on legacy code.** A repository with 400 pre-existing findings must be able to gate
@@ -211,21 +212,31 @@ is wrong for a multi-module repo (different classpaths) and unbounded in memory.
 `AnalysisResult` gains counters: files discovered, files parsed, files attributed, files skipped
 (with reasons grouped: syntax error, missing symbol, other), and rule failures (already present).
 
-- Console output ends with an attribution line whenever coverage < 100 %:
+- **Implemented.** Output ends with an attribution footer on stderr whenever coverage < 100 %,
+  whatever `--format` is, so it never lands inside a JSON or SARIF report. Verbatim from
+  `--packs dead-code` over the vibetags repository with default discovery:
 
   ```
-  ⚠ 412 of 1,204 files could not be fully type-checked (66% attributed).
-    Type-aware rules did not run on them. Most common cause: 3 unresolved imports
-    (org.springframework.*, com.acme.internal.*, lombok.*).
-    Try: --resolve build   (see codekoll --help resolve)
+  warning: 89 of 765 files could not be type-checked (88% type-checked), so no rule ran on them and a clean result does not cover them.
+    Unresolved, by files affected: org.jspecify.annotations (72 files), org.junit.jupiter.api (10 files), org.junit.jupiter.api.io (9 files), org.slf4j (9 files), com.google.devtools.ksp.symbol (5 files), and 11 more
+    Lombok is among them: codekoll runs javac with -proc:none, so members Lombok generates never exist. Analyze delomboked sources (lombok delombok) to cover those files.
+    Put the missing jars on --classpath. --verbose lists every skipped file.
   ```
+
+  The percentage is rounded down, so a run with any unchecked file never reads "100 %". A name is
+  counted once per file that cannot resolve it. It comes from javac's `doesnt.exist`,
+  `cant.access` and package-located `cant.resolve.location` errors; a file that failed for
+  another reason (a syntax error) is counted but names nothing. The hint will name
+  `--resolve build` once Milestone 13 makes it available; until then `--classpath` is the only
+  remedy, so that is what it names. ASCII only, because the old per-file line's em dash came
+  out as a replacement character on a Windows console.
 
 - `--min-attribution <pct>` (default `0`, i.e. off) makes the run exit `2` when coverage falls
   below the threshold. The recommended CI setting is `--min-attribution 90`.
 - `--strict` (already promised by SPEC §3.3 for rule crashes) is extended: it also turns
   attribution failures and resolution failures into a non-zero exit.
-- Skipped files are listed under `--verbose`, summarized otherwise. The current behaviour of
-  printing one `skipped (does not compile): …` line per file is replaced — on a foreign repo it
+- **Implemented.** Skipped files are listed under `--verbose`, summarized otherwise. The old
+  behaviour of printing one `skipped (does not compile): …` line per file is replaced — on a foreign repo it
   buries the findings.
 - Lombok deserves a named diagnostic: if `lombok` appears among unresolved imports, say so
   explicitly and point at `--resolve build`, since annotation processing is disabled (`-proc:none`)
