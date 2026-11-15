@@ -16,6 +16,9 @@ io.codekoll.rules.concurrency.CancelSwallowedRule
 io.codekoll.rules.concurrency.CommonPoolBlockingRule
 io.codekoll.rules.modern.VtThreadLocalRule
 io.codekoll.rules.modern.VtSyncPinningRule
+io.codekoll.rules.modern.FfmConfinedEscapeRule
+io.codekoll.rules.modern.FfmArenaLeakRule
+io.codekoll.rules.modern.FfmReinterpretUnboundedRule
 io.codekoll.rules.security.WeakCryptoRule
 io.codekoll.rules.security.HardcodedSecretRule
 io.codekoll.rules.security.WeakTlsRule
