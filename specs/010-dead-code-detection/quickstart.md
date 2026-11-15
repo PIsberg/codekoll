@@ -1,8 +1,8 @@
 # Quickstart: manual checks for Dead Code Detection
 
 Two success criteria need a person: SC-002 is a maintainer's judgement and SC-003 a timing
-comparison the CI quick profile is too coarse for (it fails only on a doubling). Run both after
-T017, from the repository root, on a built jar (`mvn -DskipTests package`).
+comparison the CI quick profile is too coarse for (it fails only on a doubling). T018 runs both
+after T017 and records the results under a `## Results` heading it adds at the end, from the repository root, on a built jar (`mvn -DskipTests package`).
 
 ## SC-002: no false positives on codekoll's own sources
 

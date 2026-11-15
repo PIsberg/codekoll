@@ -35,7 +35,7 @@ break; accepted are `if (false)`, `if (D)`, `if (1 > 2)`, `false ? 1 : x` and a 
 
 **Project Type**: Static analyzer, Maven multi-module, one JPMS module per Maven module
 
-**Performance Goals**: SC-003, at most 10% over the existing profile; checked by hand in [quickstart.md](quickstart.md), the CI quick profile only catches a doubling
+**Performance Goals**: SC-003, at most 10% over the existing profile; checked by hand in [quickstart.md](quickstart.md) (T018), the CI quick profile only catches a doubling
 
 **Constraints**: Principle III (silent when in doubt), Principle VI (method-local, CK-UNUSED-PRIVATE single-class per FR-011)
 
@@ -71,6 +71,9 @@ In a block or a switch case's statement list, an `if` without else whose conditi
 whose then-statement cannot complete normally (it is, or is a block whose last statement is,
 recursively, a `return`, `throw`, `break`, `continue` or `yield`) makes the next statement of that
 list unreachable; the finding anchors there. A named-constant condition is silent (D2).
+`SwitchFallthroughRule`'s private `endsWithJump` already decides exactly that; it moves unchanged
+to `support/Jumps.java: endsWithJump(List<? extends StatementTree>)`, called by both rules
+(`List.of(thenStatement)` for an unbraced branch).
 
 ### Reads (shared by CK-UNUSED-LOCAL and CK-UNUSED-PRIVATE)
 
@@ -135,7 +138,7 @@ field assigned somewhere is "written but never read". Exempt, each with a negati
 | I Compiler Tree API only | T004, T007, T011, T014 | Only `com.sun.source.*`, `javax.lang.model.*`; existing `ArchitectureTest` |
 | II Module boundaries | T001, T004, T007, T011, T014 | Enum constant in api; rules stay in `codekoll-rules`, report through `RuleContext` |
 | III Heuristic rules are INFO | T006, T013 | Tests assert INFO for both unused rules (FR-007) |
-| III Every exemption has a negative fixture | T003, T006, T010, T013 | One negative per exemption listed in Design |
+| III Every exemption has a negative fixture | T003, T006, T010, T013, T018 | One negative per exemption listed in Design; T018 adds one per false positive SC-002's review finds |
 | IV Registered, in a pack, metadata non-empty | T001, T017; T003, T006, T010, T013 | `provides` + services file; tests assert pack and non-blank metadata |
 | IV Buggy and fixed example per rule | T015, T017 | Four example classes, verified by `ExampleVerificationTest` |
 | V Gates fail the build, per-site suppressions | T017 | Collateral example findings suppressed per line with a reason |
@@ -170,6 +173,8 @@ codekoll-rules/src/main/java/io/codekoll/rules/deadcode/
 ├── UnreachableRule.java
 ├── UnusedLocalRule.java
 └── UnusedPrivateRule.java
+codekoll-rules/src/main/java/io/codekoll/rules/support/Jumps.java  # endsWithJump, moved
+codekoll-rules/src/main/java/io/codekoll/rules/correctness/SwitchFallthroughRule.java  # calls Jumps
 codekoll-rules/src/main/java/module-info.java                      # provides
 codekoll-rules/src/main/resources/META-INF/services/io.codekoll.api.Rule
 codekoll-rules/src/test/java/io/codekoll/rules/deadcode/*RuleTest.java

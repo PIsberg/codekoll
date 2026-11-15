@@ -9,7 +9,7 @@ implementation task. Fixture tests use
 `RuleTestHarness: run(Rule, String, String)` (returns `codekoll-engine/.../AnalysisResult.java: findings()` for message checks).
 Style: `codekoll-rules/src/test/java/io/codekoll/rules/correctness/SelfAssignRuleTest.java`.
 
-**Organization**: three rounds; a slice is its test tasks plus one implementation task.
+**Organization**: four rounds; a slice is its test tasks plus one implementation task.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -51,7 +51,7 @@ Style: `codekoll-rules/src/test/java/io/codekoll/rules/correctness/SelfAssignRul
 
 - [ ] T009 [P] [US1] Stub `codekoll-rules/src/main/java/io/codekoll/rules/deadcode/UnreachableRule.java`: `public final class UnreachableRule extends AbstractRule`, `id()` = `new RuleId("CK-UNREACHABLE")`, `pack()` = `RulePack.DEAD_CODE`, other members as T002
 - [ ] T010 [P] [US1] Test `codekoll-rules/src/test/java/io/codekoll/rules/deadcode/UnreachableRuleTest.java` covering FR-001, FR-005, FR-007, FR-010, US1 scenarios 1 and 3. Not settled by spec: plan.md "CK-UNREACHABLE": each exit kind (`return`, `throw`, `break`, `continue`, `yield`), braced and unbraced, exit as last statement of a nested block, inside a switch case; finding on the next statement only; severity WARNING, pack, non-blank metadata, message names the statement; negatives for a then-branch that completes normally, an `if` with an else, a named-constant condition (D2), the `if` as last statement, an empty method
-- [ ] T011 [P] [US1] Implement `UnreachableRule` with `codekoll-rules/src/main/java/io/codekoll/rules/deadcode/LiteralConditions.java: valueOf` (T004); visit `BlockTree.getStatements()` and `CaseTree.getStatements()`; report as T004
+- [ ] T011 [P] [US1] Implement `UnreachableRule` with `codekoll-rules/src/main/java/io/codekoll/rules/deadcode/LiteralConditions.java: valueOf` (T004); visit `BlockTree.getStatements()` and `CaseTree.getStatements()`; report as T004. Move `codekoll-rules/src/main/java/io/codekoll/rules/correctness/SwitchFallthroughRule.java: endsWithJump` unchanged into new `codekoll-rules/src/main/java/io/codekoll/rules/support/Jumps.java`: `public final class Jumps { public static boolean endsWithJump(List<? extends StatementTree> statements) }` (non-empty list, as today); `SwitchFallthroughRule` and `UnreachableRule` (`List.of(thenStatement)` when unbraced) call it, per plan.md "CK-UNREACHABLE"; `codekoll-rules/src/test/java/io/codekoll/rules/correctness/CorrectnessBatch9RulesTest.java` keeps `SwitchFallthroughRule` covered
 
 ### Slice 5: CK-UNUSED-PRIVATE (US2, P2)
 
@@ -75,11 +75,20 @@ Style: `codekoll-rules/src/test/java/io/codekoll/rules/correctness/SelfAssignRul
 
 ---
 
+## Round 4
+
+### Slice 7: manual checks (SC-002, SC-003)
+
+- [ ] T018 [US3] Run both checks of `specs/010-dead-code-detection/quickstart.md` on the jar T017 builds and record, under a `## Results` heading at its end, the date, the finding count with each one judged true or false positive (SC-002), and the two medians and their ratio (SC-003). A false positive is fixed in its rule with a negative fixture in that rule's `codekoll-rules/src/test/java/io/codekoll/rules/deadcode/*RuleTest.java`, seen failing first (quickstart.md, Constitution Principle III); a ratio over 1.10 is reported, not tuned here. SC-002, SC-003 (No test: manual check, quickstart.md)
+
+---
+
 ## Dependencies & Execution Order
 
 - Round 1: T001 first (every stub compiles against `RulePack.DEAD_CODE`), then stubs T002, T005; tests T003, T006; implementations T004, T007, T008.
 - Round 2 needs T004 (`LiteralConditions`) for T011 and T007 (`Reads`) for T014.
 - Round 3 needs all four rules; T017 turns `ExampleVerificationTest` and `RegistryConsistencyTest` green together, so registration, examples and counts land in one slice.
+- Round 4 needs T017 (the registered rules in the jar) for T018.
 
 ## Implementation Strategy
 
