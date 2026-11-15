@@ -105,6 +105,8 @@ module io.codekoll.rules {
       io.codekoll.rules.frameworks.TxLazyReturnRule,
       io.codekoll.rules.frameworks.AsyncThreadContextRule,
       io.codekoll.rules.frameworks.TxReadonlyWriteRule,
+      io.codekoll.rules.frameworks.SealedSubtypesDriftRule,
+      io.codekoll.rules.frameworks.RecordBindingTrapRule,
       io.codekoll.rules.modern.SealedSwitchDefaultRule,
       io.codekoll.rules.modern.RecordArrayComponentRule,
       io.codekoll.rules.modern.StreamReuseRule,
