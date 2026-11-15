@@ -19,7 +19,7 @@
 
 ### User Story 1 - Find code that can never run inside a method (Priority: P1)
 
-A developer scans their project and is told about statements and branches that can never execute: a statement after an unconditional return, throw, break or continue, a branch guarded by a condition that is always false, and a loop whose body can never be entered.
+A developer scans their project and is told about statements and branches that can never execute: a statement after an `if (true)` whose branch always returns, throws, breaks or continues, and a branch guarded by a condition that is always false. A statement after a plain return, throw, break or continue, and a loop whose condition is constant false, do not compile (JLS 14.22): codekoll lists such files as skipped, as it does every file that does not compile.
 
 **Why this priority**: These are certain defects with no false-positive risk, and they fit the existing one-method-at-a-time analysis.
 
@@ -27,16 +27,16 @@ A developer scans their project and is told about statements and branches that c
 
 **Acceptance Scenarios**:
 
-1. **Given** a method with a statement after an unconditional `return`, **When** the project is scanned, **Then** a finding is reported at that statement naming it as unreachable.
-2. **Given** a method with `if (false)` or a condition built only from constants that is always false, **When** scanned, **Then** the guarded block is reported as dead.
+1. **Given** a method with a statement after `if (true) { return; }`, **When** the project is scanned, **Then** a finding is reported at that statement naming it as unreachable.
+2. **Given** a method with `if (false)` or a condition built only from literals that is always false (such as `1 > 2`), **When** scanned, **Then** the guarded block is reported as dead.
 3. **Given** the same methods corrected so every statement is reachable, **When** scanned, **Then** no dead-code finding is reported.
-4. **Given** a debug flag declared as a constant that guards a block on purpose (conditional-compilation idiom), **When** scanned, **Then** no finding is reported for that block.
+4. **Given** a condition that names a constant variable, such as a debug flag guarding a block on purpose (conditional-compilation idiom), **When** scanned, **Then** no finding is reported for that block.
 
 ---
 
 ### User Story 2 - Find unused private members and locals (Priority: P2)
 
-A developer is told about private methods, private fields, private nested types, and local variables that are never used within the class that declares them, so they can delete them.
+A developer is told about private methods, private fields and local variables that are never used within the class that declares them, so they can delete them.
 
 **Why this priority**: Most common everyday dead code, but needs a per-class view and care about reflection and annotation-driven use.
 
@@ -72,17 +72,17 @@ A developer can see dead-code findings in every existing output format alongside
 - Generated sources and test sources: findings in generated code are not reported; test sources follow the existing test-source behaviour.
 - Code reachable only through reflection, dependency injection, or serialization hooks must not be reported.
 - Empty or stub methods and `default`-only `switch` branches are not dead code.
-- A statement after an infinite loop with no exit is reported; after a loop that can exit it is not.
+- A statement after an infinite loop with no exit does not compile (JLS 14.22): codekoll lists the file as skipped and no rule reports it.
 - Non-private members (public, protected, package-private) are not reported in this feature.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The scanner MUST report a statement that follows an unconditional return, throw, break or continue in the same block as unreachable code.
-- **FR-002**: The scanner MUST report a branch or loop body guarded by a condition that is constant-false as dead code, except for the documented constant-flag idiom (User Story 1, scenario 4).
+- **FR-001**: The scanner MUST report, as unreachable code, the statement that follows an `if` whose condition is constant true and whose branch ends in a return, throw, break, continue or yield. A statement after a plain return, throw, break or continue is a compile error (JLS 14.22), which codekoll reports by listing the file as skipped.
+- **FR-002**: The scanner MUST report an `if` branch or a `?:` arm guarded by a condition that is constant-false as dead code, except for the documented constant-flag idiom (User Story 1, scenario 4). A loop whose condition is constant false is a compile error (JLS 14.22) and no rule reports it.
 - **FR-003**: The scanner MUST report private methods, private fields and local variables that are never used within their declaring class. Never-read-but-written counts as unused.
-- **FR-004**: The scanner MUST NOT report a private member that is referenced by method reference or lambda, carries an annotation marking framework use, or is required by a serialization contract.
+- **FR-004**: The scanner MUST NOT report a private member that is referenced by method reference or lambda, carries any annotation, is a field of a type carrying an annotation outside `java.lang` and JSpecify, or is required by a serialization contract.
 - **FR-005**: Every dead-code finding MUST carry rule ID, file, line, a message naming the dead element, and an explanation and fix reachable through `--explain`.
 - **FR-006**: Dead-code findings MUST appear in all existing output formats and be controllable by the existing enable/disable, severity and suppression mechanisms.
 - **FR-007**: Findings where certainty depends on heuristics (the unused private member and unused local rules) MUST be INFO severity (Constitution Principle III). Unreachable-statement and constant-false-branch findings MUST be WARNING severity.
