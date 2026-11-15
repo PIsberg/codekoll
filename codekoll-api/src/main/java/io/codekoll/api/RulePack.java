@@ -14,7 +14,8 @@ public enum RulePack {
   NULLNESS,
   MODERN,
   FRAMEWORKS,
-  PQC;
+  PQC,
+  DEAD_CODE;
 
   /** Config/CLI name, e.g. {@code api-misuse}. */
   public String id() {
