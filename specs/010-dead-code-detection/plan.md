@@ -51,11 +51,13 @@ element (FR-005).
 
 ### Literal conditions (shared by CK-DEAD-BRANCH and CK-UNREACHABLE)
 
-`LiteralConditions.valueOf(ExpressionTree)` returns `TRUE`, `FALSE` or `null`. It evaluates only:
+`LiteralConditions.valueOf(ExpressionTree)` returns a `LiteralConditions.Truth` (`enum Truth { TRUE,
+FALSE, UNKNOWN }`, nested in `LiteralConditions`): no nullable `Boolean`, so SpotBugs at threshold
+Low has no `NP_BOOLEAN_RETURN_NULL` to report. It evaluates only:
 boolean literals, `!`, `&&`, `||`, `^`, `==` and `!=` on booleans, and `==`, `!=`, `<`, `<=`, `>`,
 `>=` between int, long or char literals (compared as long) or float and double literals (compared
 as double), with parentheses stripped by `support/NullFacts.java: unwrap`. Any other node
-(identifier, field access, call, string, cast) gives `null`, which means no finding: that is the
+(identifier, field access, call, string, cast) gives `UNKNOWN`, which means no finding: that is the
 constant-flag exemption of FR-002 and US1 scenario 4 (D2).
 
 ### CK-DEAD-BRANCH (FR-002)
@@ -79,7 +81,9 @@ to `support/Jumps.java: endsWithJump(List<? extends StatementTree>)`, called by 
 
 `Reads.in(CompilationUnitTree, Trees)` returns every element referenced anywhere in the unit
 through an identifier, a field access, a method call's method select or a method reference
-(`Trees.getElement` on the path), except as the variable of a plain `=` assignment. Compound
+(`Trees.getElement` on the path), except as the variable of a plain `=` assignment. Only the
+assigned variable itself is not a read: in `arr[i] = v` the array expression `arr` and the index `i`
+are reads, and in `holder.f = v` or `this.cfg.x = v` the receiver (`holder`, `cfg`) is a read. Compound
 assignments and `++`/`--` count as reads (Principle III). A rule calls it once per unit, from
 `visitCompilationUnit` of the scanner `scanner()` returns per unit.
 
