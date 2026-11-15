@@ -200,7 +200,7 @@ here that the code does not have.
 
 ## 4. Rule Packs — Overview
 
-Rules are grouped into eleven packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
+Rules are grouped into twelve packs. The nine **founding rules** (from the original brief) are specified in full detail in §5; the **extended catalog** (§6) specifies every additional rule compactly. All ship in v1 (see PLAN.md for the build order); every rule — founding or extended — gets positive and negative fixtures, an example class documenting what is wrong and how to fix it, and a generated docs entry.
 
 | Pack | Focus | Rules |
 |---|---|---|
@@ -215,9 +215,10 @@ Rules are grouped into eleven packs. The nine **founding rules** (from the origi
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
 | `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
-| **Total** | | **117** |
+| `dead-code` | Code that can never run or is never used (§6.12) | 4 |
+| **Total** | | **121** |
 
-**Implementation status (2026-09-17): 113 of these 117 are implemented.** The table above
+**Implementation status (2026-09-17): 117 of these 121 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
 reports `correctness` 26 and `concurrency` 12. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and

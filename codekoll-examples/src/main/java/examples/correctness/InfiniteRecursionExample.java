@@ -15,7 +15,7 @@ package examples.correctness;
 public class InfiniteRecursionExample {
 
   static class buggy {
-    private String name;
+    private String name; // codekoll:off CK-UNUSED-PRIVATE the field only exists to show the recursion
 
     String getName() {
       return getName(); // :: CK-INFINITE-RECURSION

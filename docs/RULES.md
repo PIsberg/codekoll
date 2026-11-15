@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 113 rules.
+Generated from rule metadata — 117 rules.
 
 ## correctness (26)
 
@@ -169,4 +169,13 @@ Generated from rule metadata — 113 rules.
 | `CK-PQC-KEY-EXCHANGE` | WARNING | Quantum-vulnerable key establishment (RSA encryption, (EC)DH, XDH, DHKEM, HPKE, classical TLS groups and suites) |
 | `CK-PQC-KEY-MATERIAL` | INFO | Quantum-vulnerable key pair, key factory or algorithm parameters (RSA, EC, DSA, DH, XDH, EdDSA) |
 | `CK-PQC-SIGNATURE` | WARNING | Quantum-vulnerable digital signature (RSA, RSASSA-PSS, DSA, ECDSA, EdDSA; TLS signature schemes; XML signature methods) |
+
+## dead-code (4)
+
+| Rule | Severity | What is wrong |
+|------|----------|---------------|
+| `CK-DEAD-BRANCH` | WARNING | Branch that a literal condition makes unreachable |
+| `CK-UNREACHABLE` | WARNING | Statement after an if (true) that always exits |
+| `CK-UNUSED-LOCAL` | INFO | Local variable that is never used or never read |
+| `CK-UNUSED-PRIVATE` | INFO | Private method or field that is never used |
 

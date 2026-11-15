@@ -35,8 +35,10 @@ import java.util.concurrent.Callable;
 import org.jspecify.annotations.Nullable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
 
 /** Codekoll: finds Java bugs that compile cleanly but fail at runtime. */
 @Command(name = "codekoll", mixinStandardHelpOptions = true,
@@ -130,16 +132,26 @@ public final class Main implements Callable<Integer> {
       description = "Write output to this file instead of stdout.")
   private @Nullable Path output;
 
+  @Spec
+  private CommandSpec spec;
+
   // The CLI is the one component allowed to write to stdout/stderr (ArchUnit-enforced);
   // this startup error precedes the output writer's creation.
   @Override
   @SuppressWarnings("PMD.SystemPrintln")
   public Integer call() {
+    if (output == null) {
+      // The command line's own writer, so a caller that redirects it (setOut) captures the output.
+      PrintWriter out = spec.commandLine().getOut();
+      try {
+        return run(out);
+      } finally {
+        out.flush();
+      }
+    }
     PrintWriter out;
     try {
-      out = output != null
-          ? new PrintWriter(Files.newBufferedWriter(output, StandardCharsets.UTF_8))
-          : new PrintWriter(System.out, true, StandardCharsets.UTF_8);
+      out = new PrintWriter(Files.newBufferedWriter(output, StandardCharsets.UTF_8));
     } catch (IOException e) {
       System.err.println("Cannot write to " + output + ": " + e.getMessage());
       return 2;

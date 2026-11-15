@@ -119,5 +119,9 @@ module io.codekoll.rules {
       io.codekoll.rules.apimisuse.ComputeIfAbsentModRule,
       io.codekoll.rules.pqc.PqcKeyExchangeRule,
       io.codekoll.rules.pqc.PqcSignatureRule,
-      io.codekoll.rules.pqc.PqcKeyMaterialRule;
+      io.codekoll.rules.pqc.PqcKeyMaterialRule,
+      io.codekoll.rules.deadcode.DeadBranchRule,
+      io.codekoll.rules.deadcode.UnreachableRule,
+      io.codekoll.rules.deadcode.UnusedLocalRule,
+      io.codekoll.rules.deadcode.UnusedPrivateRule;
 }
