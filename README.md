@@ -2,11 +2,11 @@
 
 ![build](https://img.shields.io/badge/build-passing-brightgreen)
 ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
-![examples](https://img.shields.io/badge/examples-130%2F130-brightgreen)
+![examples](https://img.shields.io/badge/examples-133%2F133-brightgreen)
 ![quality](https://img.shields.io/badge/checkstyle%20%7C%20pmd%20%7C%20spotbugs-passing-brightgreen)
 ![archunit](https://img.shields.io/badge/archunit-passing-brightgreen)
 ![loadtest](https://img.shields.io/badge/loadtest-baseline%20v0-blue)
-![rules](https://img.shields.io/badge/rules-130-blue)
+![rules](https://img.shields.io/badge/rules-133-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
 <!-- Badges point at the named CI jobs in .github/workflows/ci.yml (build, quality,
@@ -32,11 +32,11 @@ Honest answer first: **most classic bug patterns overlap the incumbents.** SpotB
 
 Codekoll differs in *how* it works — and in one area, in *what* it finds:
 
-1. **Every finding is worth reading.** A curated catalog of 130 rules, each with an explicit false-positive budget: exemptions are part of every rule's contract and covered by tests, heuristic rules are demoted to INFO and never break your build, and any false positive found in the wild becomes a regression test before it's fixed. The opposite philosophy of "400 patterns your team disables wholesale."
+1. **Every finding is worth reading.** A curated catalog of 133 rules, each with an explicit false-positive budget: exemptions are part of every rule's contract and covered by tests, heuristic rules are demoted to INFO and never break your build, and any false positive found in the wild becomes a regression test before it's fixed. The opposite philosophy of "400 patterns your team disables wholesale."
 
 2. **Zero build integration.** SpotBugs needs your compiled bytecode. Error Prone must be wired into your javac invocation. Codekoll is one jar pointed at a source tree — no build-file changes, works on code you just checked out, drops into any CI as a single step with SARIF output for GitHub code scanning.
 
-3. **Rules that teach.** Every rule carries *what is wrong*, *what happens at runtime*, and *how to fix it* as first-class metadata — shown in findings, via `codekoll --explain CK-…`, and in a runnable examples project with a documented buggy/fixed pair for all 130 rules. Compare that to decoding `RV_RETURN_VALUE_IGNORED`.
+3. **Rules that teach.** Every rule carries *what is wrong*, *what happens at runtime*, and *how to fix it* as first-class metadata — shown in findings, via `codekoll --explain CK-…`, and in a runnable examples project with a documented buggy/fixed pair for all 133 rules. Compare that to decoding `RV_RETURN_VALUE_IGNORED`.
 
 4. **Modern Java, day one.** Codekoll parses with the JDK's own compiler (`JavacTask`), so new Java syntax works the day the JDK ships — no waiting for a third-party parser to catch up.
 
@@ -46,7 +46,7 @@ Codekoll differs in *how* it works — and in one area, in *what* it finds:
 
 ## What it finds
 
-130 rules in twelve packs. Ten target bugs that **compile cleanly and fail (or silently misbehave) at runtime**; `pqc` inventories cryptography that works today and a quantum computer breaks, and `dead-code` lists code that can never run or is never used:
+133 rules in twelve packs. Ten target bugs that **compile cleanly and fail (or silently misbehave) at runtime**; `pqc` inventories cryptography that works today and a quantum computer breaks, and `dead-code` lists code that can never run or is never used:
 
 | Pack | Focus | Rules | Flavor |
 |---|---|---|---|
@@ -54,7 +54,7 @@ Codekoll differs in *how* it works — and in one area, in *what* it finds:
 | `numeric` | Arithmetic and overflow traps | 8 | `long ms = days * 86_400_000` (overflowed before widening), comparator by subtraction, `Math.abs(hashCode())`, `1 << 32` |
 | `concurrency` | Threading and synchronization | 15 | `counter.set(counter.get() + 1)` on an Atomic (a lost update), `Thread.run()` instead of `start()`, `synchronized` on a `Lock`, `++` on volatile, double-checked locking without `volatile`, collection modified while iterating, a caught `InterruptedException` that never restores the interrupt (shutdowns hang), `catch (Exception)` or an `exceptionally` fallback that swallows cancellation, `Thread.sleep` or JDBC inside `supplyAsync`/`parallelStream` (stalls the shared common pool) |
 | `resources` | Leaks, exception handling, cleanup | 9 | unclosed streams, empty catch blocks, rethrow that drops the cause, `throw` inside `finally` |
-| `security` | Crypto, injection, TLS, ReDoS | 11 | MD5/SHA-1, SQL/command built by concatenation, trust-all TLS, XXE-default XML factories, catastrophic-backtracking regexes |
+| `security` | Crypto, injection, TLS, ReDoS, LLM prompts and output | 14 | MD5/SHA-1, SQL/command built by concatenation, trust-all TLS, XXE-default XML factories, catastrophic-backtracking regexes, user text spliced into an LLM system prompt, model output passed to `eval`/a shell/SQL, hardcoded OpenAI/Anthropic/Google AI keys |
 | `performance` | Accidentally-quadratic code | 6 | string concat in loops, regex recompiled per iteration, `keySet()`+`get()`, boxed accumulators |
 | `api-misuse` | Stdlib contracts violated | 13 | `matcher.group(3)` on a two-group regex, `Arrays.asList(intArray)` (a list of size 1, not of ints), `Map.of("k", null)` and duplicate `Set.of`/`Map.of` keys (both always throw), `Boolean.getBoolean(value)` (reads a system property, always false), `Map<String,User>.get(12345)` (always null), mutating `List.of()`, `(String[]) list.toArray()`, `split(".")`, `List<Integer>.remove(1)` (index, not value!), `toMap` without a merge function |
 | `nullness` | NPEs the compiler can't see | 8 | `int x = map.get(k)` (unboxing NPE), `x != null & x.length() > 0` (non-short-circuit), impossible null conditions, JSpecify contract violations |
@@ -85,7 +85,7 @@ java -jar codekoll.jar --explain CK-WEEK-YEAR-FORMAT
 
 Exit codes: `0` clean, `1` findings at/above the `--fail-on` threshold, `2` usage/internal error. Configure per-project via `codekoll.toml` at the repo root — disable rules or packs, adjust severities, exclude paths — and run `codekoll --print-config` to see every effective value and the file and line it came from; suppress single findings with `@SuppressWarnings("codekoll:CK-…")`. Full CLI and config reference in [docs/CLI-SPEC.md](docs/CLI-SPEC.md).
 
-**The 30-second demo:** run codekoll on its own examples module and watch all 130 rules fire —
+**The 30-second demo:** run codekoll on its own examples module and watch all 133 rules fire —
 
 ```bash
 java -jar codekoll.jar codekoll-examples/src/main/java

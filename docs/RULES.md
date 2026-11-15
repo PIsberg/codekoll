@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 130 rules.
+Generated from rule metadata — 133 rules.
 
 ## correctness (26)
 
@@ -80,7 +80,7 @@ Generated from rule metadata — 130 rules.
 | `CK-SYSTEM-EXIT` | INFO | System.exit in non-launcher code |
 | `CK-THROW-IN-FINALLY` | WARNING | throw or return inside finally discards the in-flight exception |
 
-## security (11)
+## security (14)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
@@ -88,6 +88,9 @@ Generated from rule metadata — 130 rules.
 | `CK-EXEC-CONCAT` | ERROR | Shell command built by concatenating variables |
 | `CK-HARDCODED-SECRET` | WARNING | Secret material hardcoded in a string literal |
 | `CK-INSECURE-RANDOM` | WARNING | java.util.Random with a constant seed, or used for secret material |
+| `CK-LLM-API-KEY` | WARNING | Hardcoded LLM provider API key |
+| `CK-LLM-PROMPT-INJECTION` | WARNING | Non-constant text spliced into an LLM system prompt |
+| `CK-LLM-UNSAFE-SINK` | ERROR | LLM output executed as code, a command, SQL or SpEL |
 | `CK-NATIVE-DESERIAL` | INFO | Native Java deserialization (readObject) — classic RCE vector |
 | `CK-PLAIN-HTTP` | INFO | http:// URL built for network use (cleartext transport) |
 | `CK-REDOS` | WARNING | Regex with catastrophic-backtracking shape (ReDoS) |
