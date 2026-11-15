@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 125 rules.
+Generated from rule metadata — 128 rules.
 
 ## correctness (26)
 
@@ -158,10 +158,11 @@ Generated from rule metadata — 125 rules.
 | `CK-VT-SYNC-PINNING` | INFO | Blocking while holding a monitor pins virtual threads before Java 24 |
 | `CK-VT-THREADLOCAL` | INFO | ThreadLocal used inside a virtual-thread task |
 
-## frameworks (7)
+## frameworks (10)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
+| `CK-ASYNC-THREAD-CONTEXT` | INFO | Thread-bound context read on an async thread |
 | `CK-ENTITY-CONTRACT` | ERROR | JPA @Entity that is final or has no no-arg constructor |
 | `CK-INJECT-STATIC` | ERROR | @Autowired/@Value/@Inject on a static field is skipped by DI |
 | `CK-LOG-EXCEPTION-LOST` | WARNING | Exception logged via string concat / getMessage() loses the stack trace |
@@ -169,6 +170,8 @@ Generated from rule metadata — 125 rules.
 | `CK-PROXY-SELF-INVOKE` | WARNING | Self-invocation of a @Transactional/@Async method bypasses the proxy |
 | `CK-SLF4J-PLACEHOLDER` | ERROR | SLF4J {} placeholder count does not match the arguments |
 | `CK-TEST-INVISIBLE` | ERROR | @Test method that is private, static, or returns a value |
+| `CK-TX-LAZY-RETURN` | WARNING | @Transactional method returns a lazy Stream or StreamingResponseBody |
+| `CK-TX-READONLY-WRITE` | WARNING | Write inside a @Transactional(readOnly = true) method |
 
 ## pqc (3)
 

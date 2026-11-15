@@ -93,6 +93,9 @@ io.codekoll.rules.frameworks.Slf4jPlaceholderRule
 io.codekoll.rules.frameworks.ProxySelfInvokeRule
 io.codekoll.rules.frameworks.EntityContractRule
 io.codekoll.rules.frameworks.LogExceptionLostRule
+io.codekoll.rules.frameworks.TxLazyReturnRule
+io.codekoll.rules.frameworks.AsyncThreadContextRule
+io.codekoll.rules.frameworks.TxReadonlyWriteRule
 io.codekoll.rules.modern.SealedSwitchDefaultRule
 io.codekoll.rules.modern.RecordArrayComponentRule
 io.codekoll.rules.modern.StreamReuseRule
