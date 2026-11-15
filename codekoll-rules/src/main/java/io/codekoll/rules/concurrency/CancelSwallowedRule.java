@@ -1,12 +1,10 @@
 package io.codekoll.rules.concurrency;
 
 import com.sun.source.tree.CatchTree;
-import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
-import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.TryTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
@@ -16,11 +14,10 @@ import io.codekoll.api.RuleId;
 import io.codekoll.api.RulePack;
 import io.codekoll.api.Severity;
 import io.codekoll.rules.support.AbstractRule;
+import io.codekoll.rules.support.BlockingCalls;
 import io.codekoll.rules.support.RuleContext;
 import java.util.Map;
 import java.util.Set;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ExecutableElement;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -133,39 +130,7 @@ public final class CancelSwallowedRule extends AbstractRule {
 
   /** A call in the try block, outside nested lambdas and classes, declaring InterruptedException. */
   private static boolean callsInterruptible(TreePath block, RuleContext ctx) {
-    Boolean found = new TreePathScanner<Boolean, Void>() {
-      @Override
-      public Boolean visitMethodInvocation(MethodInvocationTree node, Void unused) {
-        return declaresInterrupted(getCurrentPath()) || super.visitMethodInvocation(node, unused);
-      }
-
-      @Override
-      public Boolean visitNewClass(NewClassTree node, Void unused) {
-        return declaresInterrupted(getCurrentPath()) || super.visitNewClass(node, unused);
-      }
-
-      @Override
-      public @Nullable Boolean visitLambdaExpression(LambdaExpressionTree node, Void unused) {
-        return null;
-      }
-
-      @Override
-      public @Nullable Boolean visitClass(ClassTree node, Void unused) {
-        return null;
-      }
-
-      private boolean declaresInterrupted(TreePath call) {
-        @Nullable Element element = ctx.trees().getElement(call);
-        return element instanceof ExecutableElement method && method.getThrownTypes().stream()
-            .anyMatch(thrown -> ctx.isSubtypeOf(thrown, InterruptSignals.INTERRUPTED));
-      }
-
-      @Override
-      public Boolean reduce(@Nullable Boolean a, @Nullable Boolean b) {
-        return Boolean.TRUE.equals(a) || Boolean.TRUE.equals(b);
-      }
-    }.scan(block, null);
-    return Boolean.TRUE.equals(found);
+    return !BlockingCalls.declaring(block, ctx, Set.of(BlockingCalls.INTERRUPTED)).isEmpty();
   }
 
   private static boolean reads(LambdaExpressionTree lambda, VariableTree parameter) {

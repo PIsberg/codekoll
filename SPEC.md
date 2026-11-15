@@ -206,21 +206,21 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 |---|---|---|
 | `correctness` | Logic that is provably or almost-certainly wrong | 28 |
 | `numeric` | Arithmetic and overflow traps | 8 |
-| `concurrency` | Threading and synchronization | 16 |
+| `concurrency` | Threading and synchronization | 17 |
 | `resources` | Leaks, exception handling, cleanup | 9 |
 | `security` | Weak crypto, injection, secrets, TLS, ReDoS | 11 |
 | `performance` | Accidentally-quadratic and allocation churn | 6 |
 | `api-misuse` | Standard-library contracts violated | 13 |
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
-| `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 10 |
+| `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 12 |
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
 | `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
 | `dead-code` | Code that can never run or is never used (§6.12) | 4 |
-| **Total** | | **123** |
+| **Total** | | **126** |
 
-**Implementation status (2026-11-15): 119 of these 123 are implemented.** The table above
+**Implementation status (2026-11-15): 122 of these 126 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
-reports `correctness` 26 and `concurrency` 14. The four specified-but-unbuilt rules are
+reports `correctness` 26 and `concurrency` 15. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
 `CK-PARALLEL-MUTATION` (`concurrency`); none has an implementation, fixtures or an example class.
 See the status section at the top of [PLAN.md](PLAN.md).
@@ -384,6 +384,7 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local, exc
 | `CK-FUTURE-DISCARDED` | W | An `ExpressionStatementTree` whose value is a `CompletableFuture`/`Future` returned by a method call — the future (and **any exception inside it**) is silently dropped; async failures vanish without a trace. Keep the future and handle it (`join`, `exceptionally`, collect for `allOf`). *(`void`-lambda `thenAccept`-style tails exempt — the chain itself was the handling.)* |
 | `CK-INTERRUPT-NOT-RESTORED` | W | A `catch` clause whose types include `InterruptedException` and whose block neither calls `interrupt()` (the `Thread.currentThread().interrupt()` idiom) nor rethrows the caught variable nor throws a new `InterruptedException` — catching it clears the thread's interrupt status, so logging or wrapping it (`throw new RuntimeException(e)`) leaves every caller up the stack unable to see that the thread was asked to stop: shutdowns hang and cancelled tasks keep running. *(Exempt at a thread entry point that ends right there: the catch is in `run()`, `main(String[])` or a `Runnable` lambda and the catch block ends with `return`, ends with `break` out of a loop that is the body's last statement, or belongs to a `try` that is the body's last statement — nobody is left to read the flag.)* |
 | `CK-CANCEL-SWALLOWED` | W | Cancellation that disappears: (a) `catch (Exception)` or `catch (Throwable)` around a call that declares `throws InterruptedException` (`StructuredTaskScope.join()`, `Future.get()`, `Thread.sleep`, `BlockingQueue.take`, …), resolved from the attributed method's `throws` clause, with no earlier `catch` for `InterruptedException`/`CancellationException` on the same `try` and a block that contains no `throw`, no `interrupt()` call and no `instanceof InterruptedException`/`CancellationException` test; (b) a lambda passed to `CompletionStage.exceptionally` or `handle` (and their `Async` forms) that never reads its throwable parameter — the failure, cancellation included, turns into an ordinary value. (`whenComplete` is not flagged: the stage it returns still completes exceptionally.) Structured-concurrency scopes and executors cancel by interrupting; a task that swallows the signal keeps running and `join()`/`close()`/`shutdown` waits for it. *(Exempt: calls inside a nested lambda or class body, which cannot throw into this `try`; the same thread-entry-point exemption as `CK-INTERRUPT-NOT-RESTORED`. A broad catch around `CompletableFuture.join()` is not flagged: the cancellation it swallows is another task's, not this thread's.)* |
+| `CK-COMMONPOOL-BLOCKING` | W | A blocking call — resolved `throws` declaring `InterruptedException`, `java.io.IOException` or `java.sql.SQLException` (`Thread.sleep`, `BlockingQueue.take`, JDBC, socket I/O) — inside a lambda that runs on the shared `ForkJoinPool.commonPool()`: the task of `CompletableFuture.supplyAsync`/`runAsync` with no `Executor` argument, any `CompletionStage.*Async` stage with no `Executor` argument, or an operation on a stream made parallel earlier in the same chain (`.parallelStream()`, `.parallel()`). The common pool has one thread per core and is shared by every parallel stream and default-async future in the JVM; a few blocked tasks stall all of them. Pass a dedicated `Executor` (a virtual-thread-per-task executor for I/O) or use a sequential stream. *(Calls in a nested lambda or class body are a different task; an `*Async` call that passes an `Executor` is exempt.)* |
 
 ### 6.4 Pack `resources`
 
@@ -475,6 +476,8 @@ Java 21+ platform features are where the incumbent analyzers are thinnest — mo
 | `CK-CHRONO-UNSUPPORTED` | E | `Instant.plus/minus(n, ChronoUnit.MONTHS/YEARS/WEEKS)` or `LocalDate.plus/minus(n, ChronoUnit.HOURS/MINUTES/SECONDS)` with a constant unit — compiles cleanly, **always** throws `UnsupportedTemporalTypeException`. Convert to `ZonedDateTime`/`LocalDateTime` first, or use the unit-specific methods. |
 | `CK-DURATION-CALENDAR` | I | `ZonedDateTime.plus(Duration.ofDays(n))` — `Duration` is exact seconds, so across a DST transition "+1 day" lands at the wrong wall-clock time. Use `plusDays(n)` / `Period.ofDays(n)` for calendar arithmetic. |
 | `CK-ARENA-USE-AFTER-CLOSE` | E | FFM API (Java 22+): a `MemorySegment` obtained from an `Arena` used, in statement order, **after** the arena's `close()` — or a segment from an `Arena` opened in try-with-resources escaping the try block (returned/stored) — throws `IllegalStateException: already closed` (or is a use-after-free caught by the runtime). Keep segment use inside the arena's scope. |
+| `CK-VT-THREADLOCAL` | I | Inside a lambda handed to a virtual thread — `Thread.startVirtualThread(…)`, `Thread.ofVirtual().start/unstarted(…)`, or `submit`/`execute` on an executor created by `Executors.newVirtualThreadPerTaskExecutor()` in the same method (receiver chain, local, or try-with-resources variable) — a `get()`/`set()`/`remove()` on a `ThreadLocal`-typed receiver. Every virtual thread starts with empty thread-locals and dies after one task, so a `ThreadLocal` cache (`withInitial(SimpleDateFormat::new)`) is rebuilt for every task and never reused, and per-task context set this way is what `ScopedValue` (final in Java 25) exists for. *(Only accesses written in the task lambda itself are seen — a `ThreadLocal` touched in a called method is a documented false negative; nested lambdas inside the task are not the task.)* |
+| `CK-VT-SYNC-PINNING` | I | A `synchronized` block or method containing a call whose resolved `throws` clause declares `InterruptedException` or `java.io.IOException` (`Object.wait()`, `Thread.sleep`, `BlockingQueue.take`, socket and stream I/O), when the analyzed project targets release 21–23. On JDK 21–23 a virtual thread that blocks while holding a monitor **pins** its carrier thread: with as many pinned threads as cores, every other virtual thread stops, the classic virtual-thread deadlock. JEP 491 removed this in JDK 24, so a project whose release is 24 or later, or below 21 (no virtual threads), is silent. The release is read from the platform API javac compiled against (`Thread.ofVirtual` from 21, `Reader.of(CharSequence)` from 24), the floor of the JDKs the project supports. *(Calls inside a nested lambda or class body are not under the monitor. Native downcalls are not flagged: a native frame pins on every release with or without `synchronized`, so that shape is a separate rule, not this one.)* |
 
 ### 6.10 Pack `frameworks`
 

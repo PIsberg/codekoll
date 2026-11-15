@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 119 rules.
+Generated from rule metadata — 122 rules.
 
 ## correctness (26)
 
@@ -46,12 +46,13 @@ Generated from rule metadata — 119 rules.
 | `CK-OCTAL-LITERAL` | WARNING | Integer literal with a leading zero is octal, not decimal |
 | `CK-SHIFT-OOB` | ERROR | Shift distance >= width of the shifted type |
 
-## concurrency (14)
+## concurrency (15)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-ATOMIC-READ-MODIFY-WRITE` | WARNING | Atomic updated by set(get() ...) — a two-step read-modify-write, not an atomic one |
 | `CK-CANCEL-SWALLOWED` | WARNING | Cancellation or interrupt swallowed by a broad catch or a future fallback |
+| `CK-COMMONPOOL-BLOCKING` | WARNING | Blocking call on the shared ForkJoinPool common pool |
 | `CK-CONCURRENT-MOD` | ERROR | Collection modified while iterating it with for-each |
 | `CK-CTOR-THREAD-START` | WARNING | Thread started from inside a constructor |
 | `CK-DCL-NO-VOLATILE` | WARNING | Double-checked locking on a non-volatile field |
@@ -137,7 +138,7 @@ Generated from rule metadata — 119 rules.
 | `CK-OVERRIDE-NULLNESS` | ERROR | Override weakens the supertype's nullness contract |
 | `CK-UNBOX-NPE` | ERROR | Auto-unboxing of a nullable Map.get/poll result |
 
-## modern (10)
+## modern (12)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
@@ -151,6 +152,8 @@ Generated from rule metadata — 119 rules.
 | `CK-STRUCTURED-GET-BEFORE-JOIN` | ERROR | Subtask.get() called before StructuredTaskScope.join() |
 | `CK-VT-DAEMON-PRIORITY` | ERROR | setDaemon(false)/setPriority on a virtual thread |
 | `CK-VT-POOLING` | WARNING | Virtual-thread factory used with a pooled/bounded executor |
+| `CK-VT-SYNC-PINNING` | INFO | Blocking while holding a monitor pins virtual threads before Java 24 |
+| `CK-VT-THREADLOCAL` | INFO | ThreadLocal used inside a virtual-thread task |
 
 ## frameworks (7)
 
