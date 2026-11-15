@@ -16,7 +16,7 @@ A static analysis tool for Java source code, written in **Java 25**, that detect
 
 ### Non-Goals (v1)
 - Bytecode analysis (source-only; unlike SpotBugs which analyzes `.class` files).
-- Whole-program interprocedural dataflow analysis (rules are method-local).
+- Whole-program interprocedural dataflow analysis (rules are method-local, except the single-class rules CK-PROXY-SELF-INVOKE, CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL).
 - Automatic fixing / rewriting (may suggest fixes in messages, but never edits code).
 - IDE plugins (SARIF output makes IDE consumption possible without one).
 
@@ -315,7 +315,7 @@ Listed in implementation order (easiest → hardest). "Needs types" = requires a
 
 ## 6. Extended Catalog
 
-Each entry: what fires, key exemptions in *(italics)*. All are method-local and implementable with attributed ASTs — no interprocedural analysis. Severity E=ERROR, W=WARNING, I=INFO. INFO rules never affect exit codes at the default `--fail-on error`.
+Each entry: what fires, key exemptions in *(italics)*. All are method-local, except the single-class rules CK-PROXY-SELF-INVOKE, CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL, and implementable with attributed ASTs — no interprocedural analysis. Severity E=ERROR, W=WARNING, I=INFO. INFO rules never affect exit codes at the default `--fail-on error`.
 
 ### 6.1 Pack `correctness`
 
@@ -517,6 +517,19 @@ provider on its test classpath. JOSE/JWT algorithm constants (`RS256`, `ES256`, 
 library types that hold them, the way the frameworks pack matches annotations.
 `HPKEParameterSpec` (JDK 26 only) is not covered yet.
 
+### 6.12 Pack `dead-code`
+
+Code that can never run or whose result is never used. Detection is literal and single-class: a
+named constant, a call or a field is never evaluated, and a non-private member is never reported,
+because another class may use it. No rule defaults to ERROR.
+
+| ID | Sev | Detection |
+|---|---|---|
+| `CK-DEAD-BRANCH` | W | An `if` whose condition is built only from literals and is false (the then-statement is dead), or is true with an else (the else-statement is dead); a `?:` with such a condition (the dead arm). *(Exempt: named constants such as `static final boolean DEBUG`, method calls, strings, `do { } while (false)`, switches, empty methods.)* |
+| `CK-UNREACHABLE` | W | In a block or switch case, an `if` without else whose literal condition is true and whose then-statement cannot complete normally (`return`, `throw`, `break`, `continue`, `yield`): the next statement is unreachable. *(Exempt: named-constant conditions.)* |
+| `CK-UNUSED-LOCAL` | I | A local variable never read, or assigned but never read; compound assignments and `++`/`--` count as reads. *(Exempt: enhanced-for variables, the unnamed variable `_`, annotated locals, names starting with `ignored` or `unused`; parameters, catch and lambda parameters, try-with-resources variables and pattern bindings are never considered.)* |
+| `CK-UNUSED-PRIVATE` | I | A private method or field that nothing in the compilation unit reads; a field only assigned is "written but never read". *(Exempt: constructors and nested types; any annotation on the member; fields of annotated types such as Lombok or JPA classes; the serialization members; a name equal to a string literal in the unit; a method named like an annotated method of the same type; record-component fields; uses from lambdas and method references count.)* |
+
 ---
 
 ## 7. Reporting
@@ -567,6 +580,8 @@ Every rule ships with an explicit false-positive budget: **a rule that cries wol
 - **These targets are enforced, not aspirational:** the `codekoll-load-test` module (PLAN Milestone 9) runs a quick CPU/memory profile on every CI build against a committed `baseline.json` (baseline v0 = the project state when the harness landed) and fails the build on > 15 % CPU-time or > 20 % peak-heap regression. Per-version PNG/SVG charts (CPU, heap, kLOC/s throughput + cross-version trend) are generated into `docs/perf/` on each release.
 
 ## 11. Future Work (explicitly out of v1)
+
+- Cross-class detection of unused non-private members (needs whole-program reference data; `dead-code` reports private members only).
 
 - Intra-method dataflow (would upgrade CK-RESOURCE-LEAK, CK-IMPOSSIBLE-COND, CK-OPTIONAL-GET-BARE, CK-NULLABLE-CHAIN, CK-IMMUTABLE-MUTATE from heuristic to path-sensitive).
 - Full JSpecify propagation (`@Nullable` flow through locals) — natural extension of the nullness pack's fact machinery.
