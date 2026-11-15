@@ -213,12 +213,12 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 | `api-misuse` | Standard-library contracts violated | 13 |
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
 | `modern` | Java 21+ platform misuse — records, sealed types, virtual threads, structured concurrency, FFM, `java.time` (differentiated coverage) | 15 |
-| `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 7 |
+| `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 10 |
 | `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
 | `dead-code` | Code that can never run or is never used (§6.12) | 4 |
-| **Total** | | **129** |
+| **Total** | | **132** |
 
-**Implementation status (2026-11-15): 125 of these 129 are implemented.** The table above
+**Implementation status (2026-11-15): 128 of these 132 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
 reports `correctness` 26 and `concurrency` 15. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
@@ -497,6 +497,9 @@ Scope note: these rules match annotations by qualified name where the framework 
 | `CK-TEST-INVISIBLE` | E | A `@Test`/`@ParameterizedTest`/`@RepeatedTest` method that is **private or static or returns non-void** — JUnit silently skips it (JUnit 4) or fails discovery quietly in common setups (JUnit 5): the test reports green *by never running*. Also flags `@Test` on a class with no test engine visible. |
 | `CK-SLF4J-PLACEHOLDER` | E | SLF4J/Log4j2 logging call with a **constant** format string: count `{}` placeholders vs arguments, honoring the trailing-`Throwable` convention — a mismatch silently truncates the message or drops arguments. (Reuses the CK-FORMAT-MISMATCH parsing machinery.) |
 | `CK-LOG-EXCEPTION-LOST` | W | In a `catch` block, a logging call that includes the caught exception only via string concatenation or `e.getMessage()` — the **stack trace is lost**; `getMessage()` is frequently null. Pass the exception as the final argument: `log.error("Payment failed for {}", orderId, e);`. |
+| `CK-TX-LAZY-RETURN` | W | A `@Transactional` method whose declared return type is a lazy result consumed after it returns: `Stream`/`IntStream`/`LongStream`/`DoubleStream` or `StreamingResponseBody`. The transaction commits and the persistence context closes when the method returns, before the caller pulls the first element, so a streaming query fails with a closed `ResultSet`/session and lazy associations throw `LazyInitializationException`. Collect inside the method (`toList()`), or move the `@Transactional` boundary to the code that consumes the stream. *(Exempt when every `return` is an in-memory stream: `.stream()` on a `Collection`, `Stream.of`, `Arrays.stream`. `Flux`/`Mono` are not flagged: with a reactive transaction manager `@Transactional` on a publisher is the supported pattern.)* |
+| `CK-ASYNC-THREAD-CONTEXT` | I | A read of thread-bound context — `SecurityContextHolder.getContext()`, `MDC.get`/`getCopyOfContextMap`, `LocaleContextHolder.getLocale`/`getTimeZone`/`getLocaleContext`, `RequestContextHolder.currentRequestAttributes`/`getRequestAttributes` — inside an `@Async` method or inside a lambda passed to a `CompletionStage` `*Async` method (`supplyAsync`, `thenApplyAsync`, …). These holders are `ThreadLocal`s filled for the request thread; on the async thread they are empty: `null` authentication, missing MDC keys, the default locale, or `IllegalStateException` from `currentRequestAttributes()`. Read the value before the hand-off and pass it in. *(Heuristic, so INFO: a `TaskDecorator` or context-propagation library configured elsewhere can copy the context for `@Async`. Writes (`MDC.put`) are not flagged, and a value read before the hand-off and captured by the lambda is silent.)* |
+| `CK-TX-READONLY-WRITE` | W | Inside a method whose effective `@Transactional` has `readOnly = true` (the method's own annotation, else the class's): a call to `save`/`saveAll`/`saveAndFlush`/`delete`/`deleteAll`/`deleteById`/`deleteAllById`/`persist`/`merge`/`remove` on a receiver whose type name ends in `Repository`, `Dao`, `EntityManager` or `Session`, or a call to any method annotated `@Modifying`. Hibernate runs read-only transactions with flushing disabled and the driver may mark the connection read-only, so the write is silently never flushed, or fails with a read-only connection error only in production. Drop `readOnly = true` from this method, or move the write to a read-write transactional method. *(A method-level `@Transactional` without `readOnly` overrides a read-only class annotation; calls inside lambdas run whenever the lambda runs and are still flagged.)* |
 
 ### 6.11 Pack `pqc`
 
