@@ -20,6 +20,8 @@ module io.codekoll.rules {
       io.codekoll.rules.concurrency.AtomicReadModifyWriteRule,
       io.codekoll.rules.concurrency.StaticDateFormatRule,
       io.codekoll.rules.concurrency.SleepInSyncRule,
+      io.codekoll.rules.concurrency.InterruptNotRestoredRule,
+      io.codekoll.rules.concurrency.CancelSwallowedRule,
       io.codekoll.rules.security.WeakCryptoRule,
       io.codekoll.rules.security.HardcodedSecretRule,
       io.codekoll.rules.security.WeakTlsRule,
