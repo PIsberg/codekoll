@@ -108,7 +108,7 @@ A developer can see dead-code findings in every existing output format alongside
 ## Assumptions
 
 - Cross-class detection of unused public or package-private members (whole-program analysis) is out of scope; the project constitution restricts v1 to method-local or single-class analysis, and it belongs under Future Work.
-- Unused private members count as single-class analysis; this needs an explicit statement in the project's rule specification, which is updated with the change.
+- Unused private members and unused local variables count as single-class analysis; this needs an explicit statement in the project's rule specification, which is updated with the change.
 - Dead code is reported, never removed automatically.
 - Findings follow the project's precision-over-recall principle: when in doubt, stay silent.
 - Unused private members and locals (User Story 2) are in this feature. The project's rule specification is amended in the same change to list them as allowed single-class rules (Constitution Principle VI).

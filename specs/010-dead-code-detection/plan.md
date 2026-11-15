@@ -37,7 +37,7 @@ break; accepted are `if (false)`, `if (D)`, `if (1 > 2)`, `false ? 1 : x` and a 
 
 **Performance Goals**: SC-003, at most 10% over the existing profile; checked by hand in [quickstart.md](quickstart.md) (T018), the CI quick profile only catches a doubling
 
-**Constraints**: Principle III (silent when in doubt), Principle VI (method-local, CK-UNUSED-PRIVATE single-class per FR-011)
+**Constraints**: Principle III (silent when in doubt), Principle VI (method-local, CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL single-class per FR-011; CK-UNUSED-LOCAL builds its read set, `Reads.in`, over the whole compilation unit)
 
 **Scale/Scope**: 4 rules; registry 113 to 117, SPEC catalog 117 to 121, packs 11 to 12
 
@@ -142,7 +142,7 @@ field assigned somewhere is "written but never read". Exempt, each with a negati
 | IV Registered, in a pack, metadata non-empty | T001, T017; T003, T006, T010, T013 | `provides` + services file; tests assert pack and non-blank metadata |
 | IV Buggy and fixed example per rule | T015, T017 | Four example classes, verified by `ExampleVerificationTest` |
 | V Gates fail the build, per-site suppressions | T017 | Collateral example findings suppressed per line with a reason |
-| VI Method-local, or one class where SPEC says so | T008, T014 | SPEC lists CK-UNUSED-PRIVATE as single-class; scope is one unit |
+| VI Method-local, or one class where SPEC says so | T008, T014 | SPEC lists CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL (its read set, `Reads.in`, spans the whole unit) as single-class; scope is one unit |
 | Workflow: SPEC, README, PLAN, ARCHITECTURE in sync | T008, T017 | ARCHITECTURE.md names no packs or counts: no edit |
 | Workflow: add-a-rule order | T008, T003/T006/T010/T013, T015, T017 | SPEC first, fixtures before code, example, regenerated catalog |
 

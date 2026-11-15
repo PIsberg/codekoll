@@ -39,7 +39,7 @@ Style: `codekoll-rules/src/test/java/io/codekoll/rules/correctness/SelfAssignRul
 
 ### Slice 3: SPEC entry (US2, FR-011)
 
-- [ ] T008 [P] [US2] Docs `SPEC.md`: line 19 (non-goal) and line 318 (section 6 intro) name the single-class rules, CK-PROXY-SELF-INVOKE and CK-UNUSED-PRIVATE; add `### 6.12 Pack dead-code` after section 6.11 with the four rows (ID, Sev, Detection, exemptions in italics) from plan.md Design; add a section 11 bullet for cross-class detection of unused non-private members. Section 4 counts stay for T017, which `RegistryConsistencyTest` ties to registration. FR-011 (No test: docs)
+- [ ] T008 [P] [US2] Docs `SPEC.md`: line 19 (non-goal) and line 318 (section 6 intro) name the single-class rules, CK-PROXY-SELF-INVOKE, CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL; add `### 6.12 Pack dead-code` after section 6.11 with the four rows (ID, Sev, Detection, exemptions in italics) from plan.md Design; add a section 11 bullet for cross-class detection of unused non-private members. Section 4 counts stay for T017, which `RegistryConsistencyTest` ties to registration. FR-011 (No test: docs)
 
 ---
 
