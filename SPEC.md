@@ -208,7 +208,7 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 | `numeric` | Arithmetic and overflow traps | 8 |
 | `concurrency` | Threading and synchronization | 17 |
 | `resources` | Leaks, exception handling, cleanup | 9 |
-| `security` | Weak crypto, injection, secrets, TLS, ReDoS | 11 |
+| `security` | Weak crypto, injection, secrets, TLS, ReDoS, LLM prompt and output handling | 14 |
 | `performance` | Accidentally-quadratic and allocation churn | 6 |
 | `api-misuse` | Standard-library contracts violated | 13 |
 | `nullness` | NPEs the compiler can't see (JSpecify-aligned) | 8 |
@@ -216,9 +216,9 @@ Rules are grouped into twelve packs. The nine **founding rules** (from the origi
 | `frameworks` | **Silently ignored code** — annotations and logging contracts that compile, run without error, and quietly do nothing (differentiated coverage) | 12 |
 | `pqc` | Asymmetric cryptography a quantum computer breaks: an inventory that warns and never fails a default build (§6.11) | 3 |
 | `dead-code` | Code that can never run or is never used (§6.12) | 4 |
-| **Total** | | **134** |
+| **Total** | | **137** |
 
-**Implementation status (2026-11-15): 130 of these 134 are implemented.** The table above
+**Implementation status (2026-11-15): 133 of these 137 are implemented.** The table above
 is the specification, not an inventory — the generated `docs/RULES.md` is the inventory, and it
 reports `correctness` 26 and `concurrency` 15. The four specified-but-unbuilt rules are
 `CK-ARRAY-AS-KEY`, `CK-WALLCLOCK-ELAPSED` (`correctness`), `CK-FUTURE-DISCARDED` and
@@ -406,7 +406,7 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local, exc
 |---|---|---|
 | `CK-CRYPTO-WEAK` | E | Founding rule — §5.3. |
 | `CK-WEAK-TLS` | E | `SSLContext.getInstance(...)` with literal `"SSL"`, `"SSLv2"`, `"SSLv3"`, `"TLSv1"`, or `"TLSv1.1"` — protocols with known breaks (POODLE, BEAST). Suggest `"TLSv1.3"` (or `"TLSv1.2"` minimum). *(Bare `"TLS"` flagged as INFO — it negotiates, but pinning is better.)* |
-| `CK-HARDCODED-SECRET` | W | Non-empty string literal assigned to a variable/field/constant whose name matches `(?i)(password|passwd|pwd|secret|api[_-]?key|token|credential)` — excluding names that also match `(?i)(prompt|label|field|param|name|key$)` false-friend patterns and values that are clearly placeholders (`""`, `"${…}"`/`"%s"` template forms exempt; `"changeme"` is still flagged). |
+| `CK-HARDCODED-SECRET` | W | Non-empty string literal assigned to a variable/field/constant whose name matches `(?i)(password|passwd|pwd|secret|api[_-]?key|token|credential)` — excluding names that also match `(?i)(prompt|label|field|param|name|header|file|path|env|property|url|endpoint)` false-friend patterns and values that are clearly placeholders (`""`, `"${…}"`/`"%s"` template forms exempt; `"changeme"` is still flagged). |
 | `CK-SQL-CONCAT` | E | Argument to `Statement.execute/executeQuery/executeUpdate/addBatch` or `Connection.prepareStatement/prepareCall` is a string built with `+` (or `String.format`/`StringBuilder` chain) mixing literals with **non-constant** expressions — SQL injection shape. *(Pure-literal concatenation exempt.)* Suggest bind parameters. |
 | `CK-EXEC-CONCAT` | E | Argument to `Runtime.exec(...)` or `new ProcessBuilder(...)` built by concatenating literals with non-constant expressions — command-injection shape (same detection machinery as CK-SQL-CONCAT). Suggest the list form with each argument separate. |
 | `CK-XXE-FACTORY` | W | `DocumentBuilderFactory/SAXParserFactory/XMLInputFactory.newInstance()` whose enclosing method parses input without any hardening call first (`setFeature(disallow-doctype-decl)`, `FEATURE_SECURE_PROCESSING`, `setExpandEntityReferences(false)`, or `setProperty(ACCESS_EXTERNAL_*)`) — default config is XXE-vulnerable. |
@@ -415,6 +415,9 @@ Each entry: what fires, key exemptions in *(italics)*. All are method-local, exc
 | `CK-PLAIN-HTTP` | I | String literal starting `http://` used to construct `URL`/`URI`/`HttpRequest` — cleartext transport. *(Exempt localhost/`127.0.0.1`/`[::1]`, `.local`/`.test`/`example.com` hosts, and XML-namespace-shaped URLs, which are identifiers, not fetched.)* |
 | `CK-NATIVE-DESERIAL` | I | `ObjectInputStream.readObject()` — native Java deserialization is a well-known RCE vector when input isn't fully trusted. Advise an `ObjectInputFilter` allowlist or a different format. |
 | `CK-REDOS` | W | Regex **literal** (to `Pattern.compile`, `String.matches/replaceAll/split`) containing a catastrophic-backtracking shape: a quantified group whose body is itself quantified or contains overlapping quantified alternatives — `(a+)+`, `(a*)*`, `(a\|aa)+`, `(\\s*\\w+)*$`. Crafted input makes matching exponential and hangs the thread (ReDoS). Suggest possessive quantifiers (`*+`), atomic groups, or a rewrite. *(Only literal patterns are analyzed; the shape check is a small grammar over the parsed regex, not full worst-case analysis.)* |
+| `CK-LLM-PROMPT-INJECTION` | W | A system or developer prompt built from non-constant input, the CK-SQL-CONCAT shape (a literal concatenated with a non-constant part, `String.format`/`formatted` with a non-constant argument) passed to: `SystemMessage.from`/`systemMessage` (LangChain4j), `new SystemMessage(…)` (Spring AI), `system(…)`/`systemMessage(…)`/`addSystemMessage(…)` on a receiver whose type name contains `ChatClient`, `RequestSpec`, `MessageCreateParams` or `ChatCompletionCreateParams` (Spring AI, Anthropic and OpenAI Java SDKs), or the template of `new PromptTemplate(…)`/`SystemPromptTemplate`/`PromptTemplate.from(…)`. The system prompt is the instruction channel the model trusts most; text spliced into it can override the application's instructions (`… Ignore the above and …`). Pass user text as a user message, or as a template variable. *(Constant prompts and template variables bound with `apply`/`create(Map)` are silent; a plain variable of unknown origin is not flagged, as in CK-SQL-CONCAT.)* |
+| `CK-LLM-UNSAFE-SINK` | E | A model's completion passed straight to an interpreter: the argument is an LLM call result, or a local initialized from one, where an LLM call is a method-call chain with a receiver whose type name ends in `ChatClient`, `ChatModel`, `ChatLanguageModel`, `LanguageModel`, `OpenAIClient`, `AnthropicClient`, `ChatResponse`, `AiMessage` or `ChatCompletion`. Sinks: `ScriptEngine.eval`, `Runtime.exec`, `new ProcessBuilder(…)`/`command(…)`, `Statement.execute*`/`Connection.prepareStatement`, `JdbcTemplate`/`NamedParameterJdbcTemplate` `query*`/`update`/`execute`, `ExpressionParser.parseExpression` (SpEL). Model output is attacker-influenced whenever the prompt carries untrusted text (a document, an e-mail, a web page), so this turns prompt injection into code, command or SQL execution. Validate against an allow-list, or have the model fill parameters of a fixed operation (tool calls with typed arguments) instead of producing code. *(Only direct flow, one local deep: output that passes through any other method call first is treated as validated.)* |
+| `CK-LLM-API-KEY` | W | A string literal shaped like an LLM provider key, whatever the variable is called: OpenAI `sk-…`/`sk-proj-…` and Anthropic `sk-ant-…` (prefix plus at least 20 key characters), Google `AIza` plus 35. CK-HARDCODED-SECRET matches by variable name (`api_key`, `token`, `secret`, …), so `openAiKey = "sk-…"` passes it; a leaked LLM key is billed usage and access to the account's data. *(Placeholders (`sk-xxxx…`, `…your…`, `…example…`, `…placeholder…`) are silent; a literal that CK-HARDCODED-SECRET already reports by its variable name is left to that rule, so one leak yields one finding.)* |
 
 ### 6.6 Pack `performance`
 

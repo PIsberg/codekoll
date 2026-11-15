@@ -62,6 +62,14 @@ public final class HardcodedSecretRule extends AbstractRule {
         + "version control; keep only the lookup key in code.";
   }
 
+  /**
+   * Whether a variable called {@code name} is one this rule reports when it holds a literal.
+   * CK-LLM-API-KEY defers to it for those, so one leaked key yields one finding.
+   */
+  static boolean namesSecret(String name) {
+    return SECRET_NAME.matcher(name).matches() && !FALSE_FRIEND.matcher(name).matches();
+  }
+
   @Override
   protected TreePathScanner<Void, RuleContext> scanner() {
     return new TreePathScanner<>() {
@@ -81,8 +89,7 @@ public final class HardcodedSecretRule extends AbstractRule {
 
       private void check(com.sun.source.tree.Tree node, String name, ExpressionTree value,
           RuleContext ctx) {
-        if (SECRET_NAME.matcher(name).matches()
-            && !FALSE_FRIEND.matcher(name).matches()
+        if (namesSecret(name)
             && NullFacts.unwrap(value) instanceof LiteralTree literal
             && literal.getValue() instanceof String s
             && !isPlaceholder(s)) {
