@@ -14,7 +14,7 @@ class DeadBranchRuleTest {
   private final DeadBranchRule rule = new DeadBranchRule();
 
   @Test
-  void metadata() { // 010 FR-005, FR-007
+  void metadata() { // 010 FR-005, FR-007, FR-010 (never ERROR severity)
     assertEquals("CK-DEAD-BRANCH", rule.id().value());
     assertEquals(RulePack.DEAD_CODE, rule.pack());
     assertEquals(Severity.WARNING, rule.defaultSeverity());

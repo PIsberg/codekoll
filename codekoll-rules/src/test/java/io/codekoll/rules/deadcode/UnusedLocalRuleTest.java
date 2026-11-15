@@ -14,7 +14,7 @@ class UnusedLocalRuleTest {
   private final UnusedLocalRule rule = new UnusedLocalRule();
 
   @Test
-  void metadata() { // 010 FR-005, FR-007
+  void metadata() { // 010 FR-005, FR-007, FR-010 (never ERROR severity)
     assertEquals("CK-UNUSED-LOCAL", rule.id().value());
     assertEquals(RulePack.DEAD_CODE, rule.pack());
     assertEquals(Severity.INFO, rule.defaultSeverity());
