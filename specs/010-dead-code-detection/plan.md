@@ -35,7 +35,7 @@ break; accepted are `if (false)`, `if (D)`, `if (1 > 2)`, `false ? 1 : x` and a 
 
 **Project Type**: Static analyzer, Maven multi-module, one JPMS module per Maven module
 
-**Performance Goals**: SC-003, at most 10% over the existing profile; checked by hand in [quickstart.md](quickstart.md) (T018), the CI quick profile only catches a doubling
+**Performance Goals**: SC-003, at most 10% over the existing profile; checked by hand in [quickstart.md](quickstart.md) (T018) as shell wall-clock time, median of 5 runs after a warm-up, pack disabled vs enabled; the CI quick profile only catches a doubling
 
 **Constraints**: Principle III (silent when in doubt), Principle VI (method-local, CK-UNUSED-PRIVATE and CK-UNUSED-LOCAL single-class per FR-011; CK-UNUSED-LOCAL builds its read set, `Reads.in`, over the whole compilation unit)
 
@@ -74,8 +74,11 @@ whose then-statement cannot complete normally (it is, or is a block whose last s
 recursively, a `return`, `throw`, `break`, `continue` or `yield`) makes the next statement of that
 list unreachable; the finding anchors there. A named-constant condition is silent (D2).
 `SwitchFallthroughRule`'s private `endsWithJump` already decides exactly that; it moves unchanged
-to `support/Jumps.java: endsWithJump(List<? extends StatementTree>)`, called by both rules
-(`List.of(thenStatement)` for an unbraced branch).
+to `support/Jumps.java: endsWithJump(List<? extends StatementTree>)`, called by both rules;
+`UnreachableRule` always passes `List.of(thenStatement)`, braced or not, since `endsWithJump`
+already recurses into a block and guards an empty one. Arrow cases are handled the way
+`SwitchFallthroughRule` does (`SwitchFallthroughRule.java:65` checks the case kind first): for a
+`CaseTree.CaseKind.RULE` case use `getBody()`, never `getStatements()`, which returns null there.
 
 ### Reads (shared by CK-UNUSED-LOCAL and CK-UNUSED-PRIVATE)
 

@@ -1,7 +1,8 @@
 # Quickstart: manual checks for Dead Code Detection
 
 Two success criteria need a person: SC-002 is a maintainer's judgement and SC-003 a timing
-comparison the CI quick profile is too coarse for (it fails only on a doubling). T018 runs both
+comparison the CI quick profile is too coarse for (it fails only on a doubling), measured as
+wall-clock time from the shell because codekoll prints no time. T018 runs both
 after T017 and records the results under a `## Results` heading it adds at the end, from the repository root, on a built jar (`mvn -DskipTests package`).
 
 ## SC-002: no false positives on codekoll's own sources
@@ -23,11 +24,13 @@ Same jar, same machine, nothing else building. Write `no-dead-code.toml` in a sc
 disable-packs = ["dead-code"]
 ```
 
-Run each command three times and take the median of the time the console summary prints:
+The console summary prints only counts, so measure wall-clock time from the shell (bash `time`,
+or `date +%s%N` before and after). Run each command once as a warm-up, then 5 times, and take
+the median of those 5 per command:
 
 ```bash
-java -jar codekoll-cli/target/codekoll.jar --resolve none --fail-on never --config <scratch>/no-dead-code.toml .
-java -jar codekoll-cli/target/codekoll.jar --resolve none --fail-on never .
+time java -jar codekoll-cli/target/codekoll.jar --resolve none --fail-on never --config <scratch>/no-dead-code.toml .
+time java -jar codekoll-cli/target/codekoll.jar --resolve none --fail-on never .
 ```
 
-Pass: the second median is at most 1.10 times the first.
+Pass: the ratio enabled/disabled (second median over first) is at most 1.10.
