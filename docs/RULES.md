@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 122 rules.
+Generated from rule metadata — 125 rules.
 
 ## correctness (26)
 
@@ -138,13 +138,16 @@ Generated from rule metadata — 122 rules.
 | `CK-OVERRIDE-NULLNESS` | ERROR | Override weakens the supertype's nullness contract |
 | `CK-UNBOX-NPE` | ERROR | Auto-unboxing of a nullable Map.get/poll result |
 
-## modern (12)
+## modern (15)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
 | `CK-ARENA-USE-AFTER-CLOSE` | ERROR | MemorySegment used after its Arena is closed |
 | `CK-CHRONO-UNSUPPORTED` | ERROR | Instant.plus(MONTHS) / LocalDate.plus(HOURS): always throws |
 | `CK-DURATION-CALENDAR` | INFO | Duration.ofDays used for calendar arithmetic on zoned times |
+| `CK-FFM-ARENA-LEAK` | WARNING | Confined or shared Arena never closed |
+| `CK-FFM-CONFINED-ESCAPE` | ERROR | Confined Arena or its segment used on another thread |
+| `CK-FFM-REINTERPRET-UNBOUNDED` | INFO | Native pointer resized with reinterpret(long) but given no lifetime |
 | `CK-RECORD-ARRAY-COMPONENT` | WARNING | Record component of array type breaks generated equals/hashCode |
 | `CK-RECORD-MUTABLE-COMPONENT` | INFO | Record component of a mutable type with no defensive copy |
 | `CK-SEALED-SWITCH-DEFAULT` | WARNING | default branch in a switch over a sealed type |
