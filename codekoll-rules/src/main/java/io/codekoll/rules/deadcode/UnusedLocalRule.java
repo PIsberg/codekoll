@@ -76,7 +76,7 @@ public final class UnusedLocalRule extends AbstractRule {
 
       private boolean isExempt(VariableTree node) {
         String name = node.getName().toString();
-        return name.isEmpty() || name.equals("_") || name.startsWith("ignored") || name.startsWith("unused")
+        return name.isEmpty() || "_".equals(name) || name.startsWith("ignored") || name.startsWith("unused")
             || !node.getModifiers().getAnnotations().isEmpty()
             || getCurrentPath().getParentPath().getLeaf() instanceof EnhancedForLoopTree;
       }

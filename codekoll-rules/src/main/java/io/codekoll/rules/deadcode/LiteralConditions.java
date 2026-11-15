@@ -73,7 +73,7 @@ final class LiteralConditions {
       if (Double.isNaN(a) || Double.isNaN(c)) {
         return Truth.UNKNOWN;
       }
-      cmp = a == c ? 0 : Double.compare(a, c);
+      cmp = a < c ? -1 : (a > c ? 1 : 0);
     }
     return switch (k) {
       case EQUAL_TO -> of(cmp == 0);

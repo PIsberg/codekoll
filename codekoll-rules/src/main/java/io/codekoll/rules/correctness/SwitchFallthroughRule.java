@@ -2,12 +2,12 @@ package io.codekoll.rules.correctness;
 
 import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.SwitchTree;
-import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePathScanner;
 import io.codekoll.api.RuleId;
 import io.codekoll.api.RulePack;
 import io.codekoll.api.Severity;
 import io.codekoll.rules.support.AbstractRule;
+import io.codekoll.rules.support.Jumps;
 import io.codekoll.rules.support.RuleContext;
 import java.util.List;
 
@@ -64,23 +64,12 @@ public final class SwitchFallthroughRule extends AbstractRule {
           CaseTree current = cases.get(i);
           if (current.getCaseKind() == CaseTree.CaseKind.STATEMENT
               && !current.getStatements().isEmpty()
-              && !endsWithJump(current.getStatements())) {
+              && !Jumps.endsWithJump(current.getStatements())) {
             ctx.report(current, "This case has statements but no break/return/throw — it "
                 + "falls into the next case. Add a break, or use arrow-form switch.");
           }
         }
         return super.visitSwitch(node, ctx);
-      }
-
-      private boolean endsWithJump(List<? extends com.sun.source.tree.StatementTree> stmts) {
-        Tree last = stmts.get(stmts.size() - 1);
-        Tree.Kind kind = last.getKind();
-        return kind == Tree.Kind.BREAK || kind == Tree.Kind.RETURN
-            || kind == Tree.Kind.THROW || kind == Tree.Kind.CONTINUE
-            || kind == Tree.Kind.YIELD
-            || (last instanceof com.sun.source.tree.BlockTree block
-                && !block.getStatements().isEmpty()
-                && endsWithJump(block.getStatements()));
       }
     };
   }

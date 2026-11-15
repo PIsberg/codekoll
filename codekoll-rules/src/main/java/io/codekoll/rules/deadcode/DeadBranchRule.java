@@ -59,7 +59,7 @@ public final class DeadBranchRule extends AbstractRule {
                   "Dead branch: the condition is always true, so the else-branch never runs");
             }
           }
-          case UNKNOWN -> { }
+          default -> { }
         }
         return super.visitIf(node, ctx);
       }
@@ -71,7 +71,7 @@ public final class DeadBranchRule extends AbstractRule {
               "Dead branch: the condition is always false, so the then-arm never runs");
           case TRUE -> ctx.report(node.getFalseExpression(),
               "Dead branch: the condition is always true, so the else-arm never runs");
-          case UNKNOWN -> { }
+          default -> { }
         }
         return super.visitConditionalExpression(node, ctx);
       }
