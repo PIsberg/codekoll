@@ -34,3 +34,18 @@ time java -jar codekoll-cli/target/codekoll.jar --resolve none --fail-on never .
 ```
 
 Pass: the ratio enabled/disabled (second median over first) is at most 1.10.
+
+## Results
+
+Run 2026-11-15 on `codekoll-cli/target/codekoll.jar` (rebuilt with `mvn -DskipTests package`), repository root.
+
+SC-002: `--packs dead-code --resolve none .` reports 4 findings, all in `codekoll-examples/src/main/java/examples/deadcode/`, each on its `// :: <ID>` marker in a `buggy()` part: CK-DEAD-BRANCH (DeadBranchExample:20), CK-UNREACHABLE (UnreachableExample:22), CK-UNUSED-LOCAL (UnusedLocalExample:16), CK-UNUSED-PRIVATE (UnusedPrivateExample:17). 4 true positives, 0 false positives. No finding in any other source. Pass.
+
+SC-003: wall-clock via `date +%s%N`, one warm-up then 5 runs per command, `--resolve none --fail-on never .`.
+
+| Pack | Runs (ms) | Median (ms) |
+|------|-----------|-------------|
+| disabled (`no-dead-code.toml`) | 11846 11690 11796 11910 12210 | 11846 |
+| enabled | 12223 11962 11726 11726 12697 | 11962 |
+
+Ratio enabled/disabled = 11962 / 11846 = 1.01 (limit 1.10). Pass. Run spread (11690 to 12697 ms) is larger than the median gap, so the difference is within noise.

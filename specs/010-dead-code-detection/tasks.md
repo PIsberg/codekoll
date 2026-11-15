@@ -79,7 +79,7 @@ Style: `codekoll-rules/src/test/java/io/codekoll/rules/correctness/SelfAssignRul
 
 ### Slice 7: manual checks (SC-002, SC-003)
 
-- [ ] T018 [US3] Run both checks of `specs/010-dead-code-detection/quickstart.md` on the jar T017 builds and record, under a `## Results` heading at its end, the date, the finding count with each one judged true or false positive (SC-002), and, from shell wall-clock time (one warm-up then 5 runs per command, pack disabled and enabled), the two medians and their enabled/disabled ratio (SC-003). A false positive is fixed in its rule with a negative fixture in that rule's `codekoll-rules/src/test/java/io/codekoll/rules/deadcode/*RuleTest.java`, seen failing first (quickstart.md, Constitution Principle III); a ratio over 1.10 is reported, not tuned here. SC-002, SC-003 (No test: manual check, quickstart.md)
+- [X] T018 [US3] Run both checks of `specs/010-dead-code-detection/quickstart.md` on the jar T017 builds and record, under a `## Results` heading at its end, the date, the finding count with each one judged true or false positive (SC-002), and, from shell wall-clock time (one warm-up then 5 runs per command, pack disabled and enabled), the two medians and their enabled/disabled ratio (SC-003). A false positive is fixed in its rule with a negative fixture in that rule's `codekoll-rules/src/test/java/io/codekoll/rules/deadcode/*RuleTest.java`, seen failing first (quickstart.md, Constitution Principle III); a ratio over 1.10 is reported, not tuned here. SC-002, SC-003 (No test: manual check, quickstart.md)
 
 ---
 
