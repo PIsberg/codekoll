@@ -206,8 +206,9 @@ User-visible surface:
       belong to Milestones 13–14 and are not here yet.
 - [ ] Translate `SourceUnit` → `AnalysisUnit` in the CLI. **Not done, deliberately:** the CLI
       runs one `CompilationDriver` per unit and merges the results, which is what makes per-unit
-      release and classpath real today. `AnalysisUnit`/`Attribution` stay unused until Milestone
-      14 adds `analyzeUnits`, batching and the attribution counters they exist for.
+      release and classpath real today. `AnalysisUnit` stays unused until Milestone 14 adds
+      `analyzeUnits` and batching. (`Attribution` is in use since the §6 footer landed early;
+      see Milestone 14.)
 
 **Exit criterion:** `codekoll --print-workspace` on all seven fixture repos and on the three
 standing corpus repos produces a correct unit list; `codekoll .` from the codekoll repo root
@@ -302,10 +303,15 @@ subprocess to run.
       inside the target repo (asserted by a test that snapshots the fixture repo's file tree
       before and after a run).
 - [ ] `--timeout` for the whole run; partial results reported, exit `2`.
-- [ ] **Attribution accounting** (§6): counters on `AnalysisResult`, skipped-file reasons grouped,
-      the unresolved-import summary, the named Lombok diagnostic.
-- [ ] Console attribution footer, `--min-attribution <pct>`, `--strict` extended to attribution and
-      resolution failures. Replace the per-file `skipped (does not compile)` spam with the summary.
+- [x] **Attribution accounting** (§6): `AnalysisResult.attribution()` (discovered, type-checked,
+      and each unresolved package or class with the number of files it broke), the
+      unresolved-import summary, the named Lombok diagnostic. Landed ahead of the rest of this
+      milestone, because a scan of vibetags reported "0 error(s), 0 warning(s), 1 info" over 89
+      of 765 files that were never analyzed. Not done: grouping skip reasons into syntax error /
+      missing symbol / other.
+- [x] Console attribution footer, and the per-file `skipped (does not compile)` lines moved
+      behind `--verbose`. `AttributionFooterCliTest` and `AttributionAccountingTest` pin both.
+- [ ] `--min-attribution <pct>`, `--strict` extended to attribution and resolution failures.
 - [ ] `codekoll-load-test`: external-repo corpus tier (generated multi-module 100 kLOC repo),
       asserting bounded heap under batching and no finding-set change versus a single batch.
       Baseline updated **in its own PR with the reason stated**, per the standing agreement.

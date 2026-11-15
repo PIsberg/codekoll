@@ -95,7 +95,7 @@ java -jar codekoll.jar codekoll-examples/src/main/java
 
 Codekoll drives the JDK compiler itself: sources are parsed and **attributed** by `javac` (`JavacTask.parse()` + `analyze()`), giving every rule fully resolved types, generics, and symbols — the same answers the compiler has. A single combined traversal walks each file once, dispatching AST nodes to the rules subscribed to them; findings stream to console, JSON, or SARIF reporters.
 
-Because analysis is source-level and compiler-backed: analyzed code must compile (files with hard errors are reported as skipped), results are exact rather than decompiled guesses, and there is exactly one runtime dependency (the CLI parser). Architecture details — module graph, rule SPI, dispatcher design — in [ARCHITECTURE.md](ARCHITECTURE.md).
+Because analysis is source-level and compiler-backed: analyzed code must compile (a file that does not type-check gets no rule; the run ends with a footer saying how many files that was and which packages were missing, and `--verbose` lists them), results are exact rather than decompiled guesses, and there is exactly one runtime dependency (the CLI parser). Architecture details — module graph, rule SPI, dispatcher design — in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Project status
 

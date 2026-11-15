@@ -14,11 +14,13 @@ import java.util.Map;
  * @param findings all findings, in file/line order
  * @param skippedFiles files that failed attribution, mapped to the first compiler error
  * @param ruleFailures internal rule crashes (rule id + message); analysis continued past them
+ * @param attribution how many files type-checked, and what the others could not resolve
  */
 public record AnalysisResult(
     List<Finding> findings,
     Map<Path, String> skippedFiles,
-    List<String> ruleFailures) {
+    List<String> ruleFailures,
+    Attribution attribution) {
 
   public AnalysisResult {
     // Defensive copies: record components must not alias caller-mutable collections

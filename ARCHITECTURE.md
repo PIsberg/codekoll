@@ -59,8 +59,11 @@ and 55 of codekoll's own files stop attributing. The `selfcheck` execution there
    `SourceUnit`s (files + release + classpath), and a diagnostic for every guess it made.
 2. One `CompilationDriver` per unit, each with that unit's `--release` and classpath; the
    results are merged and sorted once, so output ordering does not depend on how discovery
-   split the repository. (`AnalysisUnit` and `Attribution` in the engine are the shape M14's
-   `analyzeUnits` will take — batching, timeouts and attribution counters belong there.)
+   split the repository. Each `AnalysisResult` carries an `Attribution` (files handed to javac,
+   files that type-checked, and each unresolved package or class with the number of files it
+   broke); the CLI sums them with `Attribution.plus` and prints the CLI-SPEC §6 footer when
+   coverage is below 100 %. (`AnalysisUnit` in the engine is the shape M14's `analyzeUnits` will
+   take; batching and timeouts belong there.)
 3. Reporters receive a `PathRenderer`. Findings keep absolute paths internally; the CLI hands
    the reporter `Workspace::relativize`, or the identity renderer under `--absolute-paths`, so
    `codekoll-report` prints repo-relative paths while still depending on nothing but the api.
