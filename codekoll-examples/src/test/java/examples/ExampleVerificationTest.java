@@ -32,17 +32,30 @@ class ExampleVerificationTest {
 
   private static final Path SOURCES = Path.of("src", "main", "java");
 
+  /**
+   * Examples for rules that only apply to projects targeting an older release
+   * (CK-VT-SYNC-PINNING: JDK 21-23), analyzed at {@code --release 21}. Maven does not compile
+   * this root; the analyzer does.
+   */
+  private static final Path RELEASE_21 = Path.of("src", "release21", "java");
+
   private static List<Rule> rules;
-  private static AnalysisResult result;
+  private static List<Finding> findings;
 
   @BeforeAll
   static void analyzeExamples() {
     rules = RuleRegistry.loadAll();
-    CompilationDriver driver = new CompilationDriver(25, "");
-    result = driver.analyzePaths(List.of(SOURCES), rules);
+    AnalysisResult current = analyze(SOURCES, 25);
+    AnalysisResult release21 = analyze(RELEASE_21, 21);
+    findings = Stream.concat(current.findings().stream(), release21.findings().stream()).toList();
+  }
+
+  private static AnalysisResult analyze(Path root, int release) {
+    AnalysisResult result = new CompilationDriver(release, "").analyzePaths(List.of(root), rules);
     assertTrue(result.skippedFiles().isEmpty(),
         "Examples must compile (they are runtime bugs): " + result.skippedFiles());
     assertTrue(result.ruleFailures().isEmpty(), "Rule crashes: " + result.ruleFailures());
+    return result;
   }
 
   @Test
@@ -59,7 +72,7 @@ class ExampleVerificationTest {
         }
       }
     }
-    Set<String> actual = result.findings().stream()
+    Set<String> actual = findings.stream()
         .map(f -> f.file().getFileName() + ":" + f.line() + ":" + f.rule())
         .collect(Collectors.toCollection(TreeSet::new));
     assertEquals(expected, actual,
@@ -68,7 +81,7 @@ class ExampleVerificationTest {
 
   @Test
   void everyRuleHasAnExampleWithFindings() {
-    Set<String> firedRules = result.findings().stream()
+    Set<String> firedRules = findings.stream()
         .map(f -> f.rule().value())
         .collect(Collectors.toSet());
     for (Rule rule : rules) {
@@ -105,9 +118,13 @@ class ExampleVerificationTest {
   }
 
   private static List<Path> exampleFiles() throws IOException {
-    try (Stream<Path> walk = Files.walk(SOURCES)) {
-      return new ArrayList<>(walk.filter(p -> p.toString().endsWith("Example.java")).toList());
+    List<Path> files = new ArrayList<>();
+    for (Path root : List.of(SOURCES, RELEASE_21)) {
+      try (Stream<Path> walk = Files.walk(root)) {
+        files.addAll(walk.filter(p -> p.toString().endsWith("Example.java")).toList());
+      }
     }
+    return files;
   }
 
   /** CK-EMPTY-CATCH → EmptyCatchExample.java */
@@ -121,7 +138,7 @@ class ExampleVerificationTest {
 
   @Test
   void severitiesComeFromRuleDefaults() {
-    for (Finding f : result.findings()) {
+    for (Finding f : findings) {
       Rule rule = rules.stream()
           .filter(r -> r.id().equals(f.rule()))
           .findFirst()

@@ -8,7 +8,7 @@ description: Use when working on the codekoll Java static analyzer — adding or
 Codekoll is a static analysis tool for Java source (written in **Java 25**) that finds bugs which compile cleanly but fail at runtime. It is built on the JDK Compiler Tree API (`com.sun.source.*` via `JavacTask`), **never** JavaParser and **never** `com.sun.tools.javac.*` internals.
 
 Authoritative documents — read before non-trivial changes, keep in sync with your change:
-- `SPEC.md` — architecture, the 123-rule catalog (twelve packs, 119 implemented) with detection algorithms and exemptions.
+- `SPEC.md` — architecture, the 126-rule catalog (twelve packs, 122 implemented) with detection algorithms and exemptions.
 - `README.md` — the public pitch (prior-art honesty + differentiators); its rule tables become generated in Milestone 10.
 - `PLAN.md` — milestones, wave ordering, working agreements.
 - `ARCHITECTURE.md` — module graph, engine internals, extension guides (exists from Milestone 1).
@@ -41,7 +41,8 @@ Authoritative documents — read before non-trivial changes, keep in sync with y
 mvn verify                        # full build: tests + ALL quality gates + dogfooding selfcheck
                                   # (codekoll runs on its own sources, --fail-on error)
 mvn -pl codekoll-rules test       # fast loop while developing a rule
-mvn -pl codekoll-examples verify  # example verification suite (all rules fire, fixed variants silent)
+mvn -pl codekoll-examples verify  # example verification suite (all rules fire, fixed variants silent;
+                                  # src/release21/java is analyzed at --release 21 for release-gated rules)
 java -jar codekoll-cli/target/codekoll.jar --help
 java -jar codekoll-cli/target/codekoll.jar codekoll-examples/src/main/java   # the 30-second demo
 java -jar codekoll-cli/target/codekoll.jar --explain CK-THREAD-RUN           # rule docs from metadata
