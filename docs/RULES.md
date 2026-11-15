@@ -1,6 +1,6 @@
 # Codekoll rule catalog
 
-Generated from rule metadata — 128 rules.
+Generated from rule metadata — 130 rules.
 
 ## correctness (26)
 
@@ -158,7 +158,7 @@ Generated from rule metadata — 128 rules.
 | `CK-VT-SYNC-PINNING` | INFO | Blocking while holding a monitor pins virtual threads before Java 24 |
 | `CK-VT-THREADLOCAL` | INFO | ThreadLocal used inside a virtual-thread task |
 
-## frameworks (10)
+## frameworks (12)
 
 | Rule | Severity | What is wrong |
 |------|----------|---------------|
@@ -168,6 +168,8 @@ Generated from rule metadata — 128 rules.
 | `CK-LOG-EXCEPTION-LOST` | WARNING | Exception logged via string concat / getMessage() loses the stack trace |
 | `CK-PROXY-ANNOTATION-INVISIBLE` | ERROR | @Transactional/@Async/@Cacheable on a private, final, or static method |
 | `CK-PROXY-SELF-INVOKE` | WARNING | Self-invocation of a @Transactional/@Async method bypasses the proxy |
+| `CK-RECORD-BINDING-TRAP` | WARNING | @Entity record, or @ConfigurationProperties field that can never be bound |
+| `CK-SEALED-SUBTYPES-DRIFT` | WARNING | @JsonSubTypes/@XmlSeeAlso on a sealed type omits a permitted subtype |
 | `CK-SLF4J-PLACEHOLDER` | ERROR | SLF4J {} placeholder count does not match the arguments |
 | `CK-TEST-INVISIBLE` | ERROR | @Test method that is private, static, or returns a value |
 | `CK-TX-LAZY-RETURN` | WARNING | @Transactional method returns a lazy Stream or StreamingResponseBody |
